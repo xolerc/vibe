@@ -84,6 +84,14 @@ html, body {
 .bg-video.active { opacity: 1; }
 
 /* Music Panel */
+#mode-toggle { display: flex; gap: 4px; margin-bottom: 4px; }
+.mode-btn {
+  flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+  color: #777; font-size: 0.65rem; padding: 3px 0; border-radius: 6px;
+  cursor: pointer; transition: all 0.2s;
+}
+.mode-btn.active { background: rgba(255,255,255,0.1); color: #ddd; border-color: rgba(255,255,255,0.25); }
+.mode-btn:hover { background: rgba(255,255,255,0.08); color: #aaa; }
 #music-panel {
   position: absolute; top: 12px; right: 12px;
   background: transparent; border-radius: 16px;
@@ -126,6 +134,11 @@ html, body {
   background: rgba(0,0,0,0.3); aspect-ratio: 16 / 9;
 }
 #yt-video-wrap iframe { display: block; width: 100%; height: 100%; border: none; }
+
+/* Mode toggle visibility */
+#music-panel.mode-video #panel-top { display: none; }
+#music-panel.mode-video #yt-video-wrap { max-height: 300px; }
+#music-panel.mode-music #globe-container canvas { display: block; }
 
 /* Chat Page */
 #page-chat {
