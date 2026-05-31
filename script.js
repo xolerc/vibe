@@ -230,10 +230,6 @@ function initGlobe() {
   };
 }
 
-const SERVER_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
-  ? 'http://localhost:3000'
-  : 'https://vibe-chat-server.onrender.com';
-
 function getUserId() {
   let id = localStorage.getItem('vibe_uid');
   if (!id) {
@@ -244,45 +240,8 @@ function getUserId() {
 }
 
 const myId = getUserId();
-const isAdmin = (myId === 'xoleric2003');
+let isAdmin = false;
 let socket = null;
-
-function connectSocket() {
-  socket = io(SERVER_URL, { transports: ['websocket', 'polling'] });
-
-  socket.on('connect', () => {
-    socket.emit('register', { userId: myId });
-    setChatStatus('online');
-    if (isAdmin) initAdmin();
-  });
-
-  socket.on('connect_error', () => setChatStatus('offline'));
-  socket.on('disconnect', () => setChatStatus('offline'));
-
-  socket.on('receive_message', (data) => {
-    if (isAdmin) {
-      addAdminMessage(data.senderId, data.text, data.time);
-      highlightUser(data.senderId);
-    } else {
-      const type = data.senderId === 'me' ? 'own' : 'other';
-      addChatMessage(data.text, type, data.time);
-    }
-  });
-
-  socket.on('admin_users', (users) => {
-    renderUserList(users);
-  });
-
-  socket.on('user_count', (count) => {
-    const el = document.getElementById('chat-status');
-    if (el) el.textContent = count + ' online';
-  });
-}
-
-function setChatStatus(s) {
-  const el = document.getElementById('chat-status');
-  if (el) el.textContent = s;
-}
 
 function formatTime(ts) {
   const d = new Date(ts);
@@ -297,108 +256,15 @@ function addChatMessage(text, type, ts) {
   el.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
 
-function initChat() {
-  const input = document.getElementById('chat-input');
-  const sendBtn = document.getElementById('chat-send');
-
-  function sendMsg() {
-    const text = input.value.trim();
-    if (!text || !socket) return;
-    socket.emit('send_message', { senderId: myId, text });
-    input.value = '';
-  }
-
-  sendBtn.addEventListener('click', sendMsg);
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') sendMsg();
-  });
-
-  connectSocket();
-}
-
-let clickCount = 0;
-let lastClick = 0;
-
-document.addEventListener('click', (e) => {
-  const now = Date.now();
-  if (now - lastClick < 500) {
-    clickCount++;
-  } else {
-    clickCount = 1;
-  }
-  lastClick = now;
-  if (clickCount === 5) {
-    clickCount = 0;
-    activateAdmin();
-  }
-});
-
-function activateAdmin() {
-  localStorage.setItem('vibe_uid', 'xoleric2003');
-  window.location.reload();
-}
-
-function initAdmin() {
-  document.getElementById('page-admin').classList.add('open');
-
-  const userList = document.getElementById('admin-user-list');
+function addAdminMessage(senderId, text, ts) {
   const adminMessages = document.getElementById('admin-messages');
-  const adminInput = document.getElementById('admin-input');
-  const adminSend = document.getElementById('admin-send');
-  const replyTo = document.getElementById('admin-reply-to');
-
-  let selectedUser = null;
-
-  window.renderUserList = function(users) {
-    userList.innerHTML = '';
-    users.forEach(u => {
-      if (u.id === 'xoleric2003') return;
-      const div = document.createElement('div');
-      div.className = 'admin-user';
-      div.innerHTML = '<span class="user-dot"></span>' + u.id.slice(0, 12) + '...';
-      div.addEventListener('click', () => {
-        selectedUser = u.id;
-        document.querySelectorAll('.admin-user').forEach(el => el.classList.remove('active'));
-        div.classList.add('active');
-        replyTo.style.display = 'block';
-        replyTo.textContent = 'To: ' + u.id.slice(0, 12) + '...';
-      });
-      userList.appendChild(div);
-    });
-  };
-
-  window.addAdminMessage = function(senderId, text, ts) {
-    const div = document.createElement('div');
-    div.className = 'admin-msg';
-    div.innerHTML = '<strong>' + senderId.slice(0, 12) + '...</strong> ' + text +
-      '<span class="time">' + formatTime(ts) + '</span>';
-    adminMessages.appendChild(div);
-    div.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  };
-
-  window.highlightUser = function(senderId) {
-    document.querySelectorAll('.admin-user').forEach(el => {
-      if (el.textContent.includes(senderId.slice(0, 12))) {
-        el.style.borderLeft = '2px solid #4488cc';
-      }
-    });
-  };
-
-  function sendAdminMsg() {
-    const text = adminInput.value.trim();
-    if (!text || !selectedUser || !socket) return;
-    socket.emit('admin_send', { targetId: selectedUser, text });
-    addAdminMessage(selectedUser, text + ' (you)', Date.now());
-    adminInput.value = '';
-  }
-
-  adminSend.addEventListener('click', sendAdminMsg);
-  adminInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') sendAdminMsg();
-  });
-
-  const navChat = document.getElementById('nav-chat');
-  if (navChat) navChat.textContent = 'Admin';
+  if (!adminMessages) return;
+  const div = document.createElement('div');
+  div.className = 'admin-msg';
+  div.innerHTML = '<strong>' + senderId.slice(0, 12) + '...</strong> ' + text +
+    '<span class="time">' + formatTime(ts) + '</span>';
+  adminMessages.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
 
 const navHome = document.getElementById('nav-home');
@@ -409,10 +275,173 @@ const pageAdmin = document.getElementById('page-admin');
 function switchPage(page) {
   navHome.classList.toggle('active', page === 'home');
   navChat.classList.toggle('active', page === 'chat');
-
-  pageChat.classList.toggle('open', page === 'chat' && !isAdmin);
-  pageAdmin.classList.toggle('open', page === 'chat' && isAdmin);
+  pageChat.classList.toggle('open', page === 'chat');
+  pageAdmin.classList.remove('open');
 }
+
+function saveMessages(key, messages) {
+  localStorage.setItem(key, JSON.stringify(messages));
+}
+
+function loadMessages(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key)) || [];
+  } catch { return []; }
+}
+
+function initChat() {
+  const messagesEl = document.getElementById('chat-messages');
+  const input = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('chat-send');
+
+  const chatHistory = loadMessages('vibe_chat');
+  chatHistory.forEach(m => addChatMessage(m.text, m.type, m.time));
+
+  function sendMsg() {
+    const text = input.value.trim();
+    if (!text) return;
+
+    const msg = { text, type: 'own', time: Date.now() };
+    addChatMessage(text, 'own', Date.now());
+
+    const history = loadMessages('vibe_chat');
+    history.push(msg);
+    saveMessages('vibe_chat', history);
+
+    if (socket && socket.connected) {
+      socket.emit('send_message', { senderId: myId, text });
+    }
+
+    input.value = '';
+  }
+
+  sendBtn.addEventListener('click', sendMsg);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendMsg();
+  });
+
+  const SERVER_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
+    ? 'http://localhost:3000'
+    : 'https://vibe-chat-server.onrender.com';
+
+  if (typeof io !== 'undefined') {
+    socket = io(SERVER_URL, { transports: ['websocket', 'polling'], timeout: 5000 });
+
+    socket.on('connect', () => {
+      socket.emit('register', { userId: myId });
+      document.getElementById('chat-status').textContent = 'online';
+    });
+
+    socket.on('connect_error', () => {
+      document.getElementById('chat-status').textContent = 'offline';
+    });
+
+    socket.on('disconnect', () => {
+      document.getElementById('chat-status').textContent = 'offline';
+    });
+
+    socket.on('receive_message', (data) => {
+      if (data.senderId !== 'me') {
+        const msg = { text: data.text, type: 'other', time: data.time };
+        addChatMessage(data.text, 'other', data.time);
+        const history = loadMessages('vibe_chat');
+        history.push(msg);
+        saveMessages('vibe_chat', history);
+      }
+    });
+  } else {
+    document.getElementById('chat-status').textContent = 'offline';
+  }
+}
+
+function initAdmin() {
+  isAdmin = true;
+  pageAdmin.classList.add('open');
+  pageChat.classList.remove('open');
+  if (navChat) navChat.textContent = 'Admin';
+
+  const adminMessages = document.getElementById('admin-messages');
+  const userList = document.getElementById('admin-user-list');
+  const adminInput = document.getElementById('admin-input');
+  const adminSend = document.getElementById('admin-send');
+  const replyTo = document.getElementById('admin-reply-to');
+
+  const saved = loadMessages('vibe_admin_chats');
+  saved.forEach(m => addAdminMessage(m.sender, m.text, m.time));
+
+  let selectedUser = null;
+
+  const users = loadMessages('vibe_known_users');
+  users.forEach(u => {
+    if (u === 'xoleric2003') return;
+    const div = document.createElement('div');
+    div.className = 'admin-user';
+    div.innerHTML = '<span class="user-dot"></span>' + u.slice(0, 12) + '...';
+    div.addEventListener('click', () => {
+      selectedUser = u;
+      document.querySelectorAll('.admin-user').forEach(el => el.classList.remove('active'));
+      div.classList.add('active');
+      replyTo.style.display = 'block';
+      replyTo.textContent = 'To: ' + u.slice(0, 12) + '...';
+    });
+    userList.appendChild(div);
+  });
+
+  function saveAdminMsg(sender, text, time) {
+    const msgs = loadMessages('vibe_admin_chats');
+    msgs.push({ sender, text, time });
+    saveMessages('vibe_admin_chats', msgs);
+  }
+
+  function sendAdminMsg() {
+    const text = adminInput.value.trim();
+    if (!text || !selectedUser) return;
+    addAdminMessage(selectedUser, text + ' (you)', Date.now());
+    saveAdminMsg(selectedUser, text + ' (you)', Date.now());
+    localStorage.setItem('vibe_last_reply_' + selectedUser, text);
+    if (socket && socket.connected) {
+      socket.emit('admin_send', { targetId: selectedUser, text });
+    }
+    adminInput.value = '';
+  }
+
+  adminSend.addEventListener('click', sendAdminMsg);
+  adminInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendAdminMsg();
+  });
+
+  if (socket) {
+    socket.on('receive_message', (data) => {
+      addAdminMessage(data.senderId, data.text, data.time);
+      saveAdminMsg(data.senderId, data.text, data.time);
+      const users = loadMessages('vibe_known_users');
+      if (!users.includes(data.senderId)) {
+        users.push(data.senderId);
+        saveMessages('vibe_known_users', users);
+      }
+    });
+  }
+}
+
+let clickCount = 0;
+let lastClick = 0;
+
+document.addEventListener('click', (e) => {
+  const pageChatOpen = pageChat.classList.contains('open');
+  if (!pageChatOpen && !pageAdmin.classList.contains('open')) return;
+
+  const now = Date.now();
+  if (now - lastClick < 500) {
+    clickCount++;
+  } else {
+    clickCount = 1;
+  }
+  lastClick = now;
+  if (clickCount === 5) {
+    clickCount = 0;
+    initAdmin();
+  }
+});
 
 navHome.addEventListener('click', () => switchPage('home'));
 navChat.addEventListener('click', () => switchPage('chat'));

@@ -459,10 +459,10 @@ html, body {
   left: 0;
   width: 100%;
   height: 56px;
-  background: rgba(15, 15, 25, 0.9);
+  background: rgba(15, 15, 25, 0.1);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid rgba(255,255,255,0.1);
   display: flex;
   align-items: center;
   justify-content: space-around;
