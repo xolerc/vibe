@@ -111,69 +111,82 @@ function initMusicPlayer() {
     trackName.textContent = t.name;
     trackArtist.textContent = t.artist;
     progressFill.style.width = '0%';
-    audio.src = t.file;
 
     if (t.video) {
+      mv.muted = false;
       mv.src = t.video;
       mv.currentTime = 0;
       mv.load();
       mv.style.display = '';
     } else {
+      mv.muted = true;
       mv.removeAttribute('src');
       mv.load();
       mv.style.display = 'none';
+      audio.src = t.file;
     }
 
     const nextT = tracks[(index + 1) % tracks.length];
     preloadVideo(nextT.video);
 
     if (isPlaying) {
-      audio.play().catch(() => {});
+      if (tracks[currentTrack].video) {
+        mv.play().catch(() => {});
+      } else {
+        audio.play().catch(() => {});
+      }
     }
   }
 
   function doPlay() {
-    if (!audio.src) { loadTrack(currentTrack); return; }
-    audio.play().then(() => {
-      setUI(true);
-      if (globe) globe.resume();
-      if (tracks[currentTrack].video) {
-        const tryPlay = () => mv.play().catch(() => setTimeout(tryPlay, 300));
-        tryPlay();
-      }
-    }).catch(() => {});
+    const t = tracks[currentTrack];
+    if (t.video) {
+      mv.play().then(() => {
+        setUI(true);
+        if (globe) globe.resume();
+      }).catch(() => setTimeout(doPlay, 300));
+    } else {
+      if (!audio.src) audio.src = t.file;
+      audio.play().then(() => {
+        setUI(true);
+        if (globe) globe.resume();
+      }).catch(() => {});
+    }
   }
 
   function pause() {
+    mv.pause();
     audio.pause();
     setUI(false);
-    mv.pause();
     if (globe) globe.pause();
   }
 
-  audio.addEventListener('timeupdate', () => {
-    if (audio.duration) {
-      progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
-      if (tracks[currentTrack].video && mv.duration && mv.readyState > 0) {
-        const diff = Math.abs(audio.currentTime - mv.currentTime);
-        if (diff > 0.5) mv.currentTime = audio.currentTime;
-      }
-    }
-  });
-  audio.addEventListener('ended', () => {
+  function getProgressSrc() {
+    return tracks[currentTrack].video ? mv : audio;
+  }
+
+  audio.addEventListener('timeupdate', syncProgress);
+  audio.addEventListener('ended', nextTrack);
+  mv.addEventListener('timeupdate', syncProgress);
+  mv.addEventListener('ended', nextTrack);
+
+  function syncProgress() {
+    const src = getProgressSrc();
+    if (src.duration) progressFill.style.width = (src.currentTime / src.duration * 100) + '%';
+  }
+
+  function nextTrack() {
     loadTrack((currentTrack + 1) % tracks.length);
     doPlay();
-  });
-  mv.addEventListener('canplay', () => {
-    if (isPlaying && mv.src) mv.play().catch(() => {});
-  });
+  }
 
   playBtn.addEventListener('click', () => {
     if (audio.paused) doPlay();
     else pause();
   });
   prevBtn.addEventListener('click', () => {
-    if (audio.currentTime > 2) { audio.currentTime = 0; if (tracks[currentTrack].video) mv.currentTime = 0; }
+    const cur = getProgressSrc();
+    if (cur.currentTime > 2) { cur.currentTime = 0; }
     else loadTrack((currentTrack - 1 + tracks.length) % tracks.length);
     doPlay();
   });
@@ -184,8 +197,8 @@ function initMusicPlayer() {
   progressBar.addEventListener('click', (e) => {
     const rect = progressBar.getBoundingClientRect();
     const pct = (e.clientX - rect.left) / rect.width;
-    audio.currentTime = pct * audio.duration;
-    if (tracks[currentTrack].video && mv.duration) mv.currentTime = pct * mv.duration;
+    const src = getProgressSrc();
+    src.currentTime = pct * src.duration;
   });
 
   loadTrack(0);
