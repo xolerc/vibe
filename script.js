@@ -230,3 +230,47 @@ function initGlobe() {
     pause() { playing = false; }
   };
 }
+
+function initChat() {
+  const chatBtn = document.getElementById('chat-btn');
+  const overlay = document.getElementById('chat-overlay');
+  const closeBtn = document.getElementById('chat-close');
+  const messagesEl = document.getElementById('chat-messages');
+  const input = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('chat-send');
+
+  chatBtn.addEventListener('click', () => overlay.classList.add('open'));
+
+  function closeChat() {
+    overlay.classList.remove('open');
+  }
+
+  closeBtn.addEventListener('click', closeChat);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeChat();
+  });
+
+  function addMessage(text, type) {
+    const el = document.createElement('div');
+    el.className = 'chat-msg ' + type;
+    const now = new Date();
+    const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    el.innerHTML = text + '<span class="time">' + time + '</span>';
+    messagesEl.appendChild(el);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function sendMessage() {
+    const text = input.value.trim();
+    if (!text) return;
+    addMessage(text, 'own');
+    input.value = '';
+  }
+
+  sendBtn.addEventListener('click', sendMessage);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendMessage();
+  });
+}
+
+initChat();
