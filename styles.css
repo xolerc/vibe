@@ -194,135 +194,7 @@ html, body {
 }
 #emoji-grid span:hover { background: rgba(255,255,255,0.1); }
 
-/* Admin Page */
-#page-admin {
-  background: rgba(10, 10, 20, 0.95);
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  z-index: 2; display: none; flex-direction: column;
-}
-#page-admin.open { display: flex; }
 
-#admin-body { display: flex; flex-direction: row; height: 100%; padding-bottom: 0; }
-
-#admin-users-col {
-  width: 180px; flex-shrink: 0;
-  border-right: 1px solid rgba(255,255,255,0.06);
-  overflow-y: auto; display: flex; flex-direction: column;
-}
-.admin-col-header {
-  padding: 14px 14px 8px; color: #666; font-size: 0.75rem; font-weight: 600;
-  display: flex; align-items: center; gap: 6px;
-}
-.admin-col-header span { color: #444; font-size: 0.65rem; }
-
-#admin-user-list { flex: 1; overflow-y: auto; }
-.admin-user {
-  padding: 10px 14px; cursor: pointer; color: #999;
-  font-size: 0.7rem; transition: background 0.2s;
-  display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.02);
-}
-.admin-user:hover { background: rgba(255,255,255,0.04); }
-.admin-user.active { background: rgba(70,130,200,0.12); color: #cce; border-left: 2px solid #68b; }
-
-.user-dot { width: 6px; height: 6px; border-radius: 50%; background: #4c4; flex-shrink: 0; }
-.admin-user .user-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.unread-badge {
-  background: #68b; color: #fff; font-size: 0.55rem;
-  padding: 1px 5px; border-radius: 8px; font-weight: 600;
-  flex-shrink: 0;
-}
-
-#admin-chat-col { flex: 1; display: flex; flex-direction: column; }
-#admin-chat-header {
-  display: flex; align-items: center; gap: 10px;
-  padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.06);
-  color: #ccc; font-size: 0.8rem; font-weight: 500;
-}
-#admin-back-btn {
-  display: none; background: none; border: none; color: #8ab;
-  font-size: 1.2rem; cursor: pointer; padding: 2px 6px;
-  border-radius: 8px; transition: background 0.15s;
-}
-#admin-back-btn:hover { background: rgba(255,255,255,0.08); }
-#admin-current-user { flex: 1; }
-
-#admin-messages {
-  flex: 1; overflow-y: auto; padding: 14px 18px;
-  display: flex; flex-direction: column; gap: 8px;
-}
-.admin-msg {
-  padding: 8px 12px; border-radius: 10px;
-  color: #bbb; font-size: 0.8rem; line-height: 1.4;
-  max-width: 80%; word-wrap: break-word;
-}
-.admin-msg.from-user {
-  align-self: flex-start;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-bottom-left-radius: 4px;
-}
-.admin-msg.from-admin {
-  align-self: flex-end;
-  background: rgba(70,130,200,0.2);
-  border: 1px solid rgba(70,130,200,0.15);
-  border-bottom-right-radius: 4px;
-}
-.admin-msg .sender {
-  font-size: 0.6rem; color: #888; font-weight: 600;
-  display: block; margin-bottom: 2px;
-}
-.admin-msg .time {
-  display: block; font-size: 0.55rem; opacity: 0.4; margin-top: 4px; text-align: right;
-}
-.admin-msg .chat-img {
-  max-width: 150px; max-height: 150px; border-radius: 8px;
-  display: block; margin-bottom: 4px; cursor: pointer;
-}
-
-#admin-input-bar {
-  display: flex; align-items: center; gap: 6px;
-  padding: 8px 12px; border-top: 1px solid rgba(255,255,255,0.06);
-}
-#admin-input {
-  flex: 1;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 20px; padding: 10px 14px;
-  color: #ddd; font-size: 0.85rem; outline: none;
-}
-#admin-input::placeholder { color: #555; }
-#admin-input:focus { border-color: rgba(255,255,255,0.15); }
-#admin-send { background: rgba(70,130,200,0.2); }
-#admin-send:hover { background: rgba(70,130,200,0.35); }
-#admin-send svg { stroke: #8ab; }
-
-/* Admin Emoji Picker */
-#admin-emoji-picker {
-  display: none;
-  position: fixed;
-  bottom: 110px;
-  left: 12px;
-  right: 12px;
-  max-width: 340px;
-  max-height: 200px;
-  background: rgba(20,20,35,0.96);
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 14px;
-  z-index: 60;
-  overflow-y: auto;
-  padding: 10px;
-}
-#admin-emoji-picker.open { display: block; }
-#admin-emoji-grid {
-  display: flex; flex-wrap: wrap; gap: 4px;
-  font-size: 1.5rem; line-height: 1;
-}
-#admin-emoji-grid span {
-  cursor: pointer; padding: 2px; border-radius: 6px;
-  transition: background 0.15s;
-}
-#admin-emoji-grid span:hover { background: rgba(255,255,255,0.1); }
 
 /* Bottom Nav */
 #bottom-nav {
@@ -368,29 +240,12 @@ html, body {
   #chat-input-bar { padding: 8px 10px; }
   #emoji-picker { left: 8px; right: 8px; max-height: 160px; }
   .chat-msg .chat-img { max-width: 140px; max-height: 140px; }
-
-  #admin-body { flex-direction: column; }
-  #admin-users-col {
-    width: 100%; border-right: none;
-    max-height: 100%; display: flex;
-  }
-  #admin-chat-col { display: none; }
-  #admin-body.show-chat #admin-users-col { display: none; }
-  #admin-body.show-chat #admin-chat-col { display: flex; }
-  #admin-back-btn { display: block; }
-  .admin-msg .chat-img { max-width: 110px; max-height: 110px; }
 }
 
 /* Scrollbar */
-#chat-messages::-webkit-scrollbar, #admin-messages::-webkit-scrollbar,
-#admin-user-list::-webkit-scrollbar, #emoji-picker::-webkit-scrollbar,
-#admin-emoji-picker::-webkit-scrollbar,
-#admin-users-col::-webkit-scrollbar { width: 4px; }
-#chat-messages::-webkit-scrollbar-track, #admin-messages::-webkit-scrollbar-track,
-#admin-user-list::-webkit-scrollbar-track, #emoji-picker::-webkit-scrollbar-track,
-#admin-emoji-picker::-webkit-scrollbar-track,
-#admin-users-col::-webkit-scrollbar-track { background: transparent; }
-#chat-messages::-webkit-scrollbar-thumb, #admin-messages::-webkit-scrollbar-thumb,
-#admin-user-list::-webkit-scrollbar-thumb, #emoji-picker::-webkit-scrollbar-thumb,
-#admin-emoji-picker::-webkit-scrollbar-thumb,
-#admin-users-col::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+#chat-messages::-webkit-scrollbar,
+#emoji-picker::-webkit-scrollbar { width: 4px; }
+#chat-messages::-webkit-scrollbar-track,
+#emoji-picker::-webkit-scrollbar-track { background: transparent; }
+#chat-messages::-webkit-scrollbar-thumb,
+#emoji-picker::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
