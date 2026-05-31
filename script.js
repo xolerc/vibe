@@ -6,6 +6,7 @@ const loadingVideo = document.getElementById('loading-video');
 function startExperience() {
   loadingScreen.classList.add('hidden');
   pageHome.classList.add('visible');
+  initNeurons();
   initMusicPlayer();
 }
 loadingVideo.addEventListener('ended', startExperience);
@@ -17,6 +18,67 @@ setTimeout(() => {
 document.body.addEventListener('click', () => {
   if (!loadingScreen.classList.contains('hidden')) loadingVideo.play();
 }, { once: true });
+
+function initNeurons() {
+  const canvas = document.getElementById('neuron-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let w, h;
+  function resize() {
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    canvas.width = Math.round(window.innerWidth * dpr);
+    canvas.height = Math.round(window.innerHeight * dpr);
+    w = canvas.width; h = canvas.height;
+  }
+  resize();
+  addEventListener('resize', resize);
+
+  const COUNT = 120;
+  const CONN_DIST = 0.08;
+  const neurons = Array.from({ length: COUNT }, () => ({
+    x: Math.random(), y: Math.random(),
+    vx: (Math.random() - 0.5) * 0.0008,
+    vy: (Math.random() - 0.5) * 0.0008
+  }));
+
+  requestAnimationFrame(function frame() {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    neurons.forEach(n => {
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0 || n.x > 1) n.vx *= -1;
+      if (n.y < 0 || n.y > 1) n.vy *= -1;
+      const px = n.x * w, py = n.y * h;
+      ctx.beginPath();
+      ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(100, 180, 255, 0.6)';
+      ctx.fill();
+    });
+
+    for (let i = 0; i < COUNT; i++) {
+      for (let j = i + 1; j < COUNT; j++) {
+        const dx = neurons[i].x - neurons[j].x;
+        const dy = neurons[i].y - neurons[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < CONN_DIST) {
+          ctx.beginPath();
+          ctx.moveTo(neurons[i].x * w, neurons[i].y * h);
+          ctx.lineTo(neurons[j].x * w, neurons[j].y * h);
+          ctx.strokeStyle = `rgba(100, 180, 255, ${(1 - dist / CONN_DIST) * 0.2})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.restore();
+    requestAnimationFrame(frame);
+  });
+}
 
 function initMusicPlayer() {
   const playBtn = document.getElementById('play-btn');
@@ -338,17 +400,27 @@ function processNewMessages(data) {
   if (!newMsgs.length) return;
   saveJSON('vibe_fb_ids', [...knownIds]);
 
-  /* User chat: only admin replies */
   const userHist = loadJSON('vibe_chat', []);
   let userChanged = false;
-
-  /* Admin data: all user messages */
   const admData = loadJSON('vibe_admin_data', {});
   let admChanged = false;
 
   newMsgs.forEach(m => {
-    /* user chat */
-    if (m.senderId === 'admin') {
+    /* Delete signal from admin */
+    if (m.type === 'delete_all' && m.senderId === 'admin') {
+      if (m.targetId === myId) {
+        userHist.length = 0;
+        userChanged = true;
+      }
+      if (admData[m.targetId]) {
+        admData[m.targetId].messages = [];
+        admData[m.targetId].unread = 0;
+        admChanged = true;
+      }
+      return;
+    }
+
+    if (m.senderId === 'admin' && !m.type) {
       userHist.push({ text: m.text, type: 'other', time: m.time, isImage: m.isImage, isFile: m.isFile, fileName: m.fileName });
       userChanged = true;
       if (document.getElementById('page-chat').classList.contains('open')) {
@@ -648,6 +720,7 @@ function initAdmin() {
       admData[selectedAdmUser].unread = 0;
       saveJSON('vibe_admin_data', admData);
     }
+    fbSend({ senderId: 'admin', type: 'delete_all', targetId: selectedAdmUser, time: Date.now() });
     renderAdmMessages(selectedAdmUser);
     renderUserList();
   });
@@ -782,16 +855,23 @@ navChat.addEventListener('click', () => {
   }
 });
 
-/* ─── 5-Click ─── */
+/* ─── 5-Click Admin ─── */
 let clickCount = 0;
 let lastClick = 0;
-document.addEventListener('click', (e) => {
-  if (!pageChat.classList.contains('open')) return;
+navChat.addEventListener('click', (e) => {
   const now = Date.now();
   if (now - lastClick < 500) clickCount++;
   else clickCount = 1;
   lastClick = now;
-  if (clickCount === 5) { clickCount = 0; initAdmin(); }
+  if (clickCount === 5) {
+    clickCount = 0;
+    const pw = prompt('Enter admin password:');
+    if (pw === '@xoleiccore') {
+      initAdmin();
+    } else if (pw !== null) {
+      alert('Wrong password');
+    }
+  }
 });
 
 /* ─── Init ─── */
