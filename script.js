@@ -9,7 +9,6 @@ function startExperience() {
   pageHome.classList.add('visible');
   startBackgroundLoop();
   initMusicPlayer();
-  initLogoGlobe();
 }
 loadingVideo.addEventListener('ended', startExperience);
 loadingVideo.addEventListener('canplay', () => loadingVideo.play());
@@ -168,50 +167,6 @@ function initGlobe() {
   }
   animate();
   return { resume() { playing = true; }, pause() { playing = false; } };
-}
-
-function initLogoGlobe() {
-  const container = document.getElementById('logo-globe');
-  if (!container) return;
-  const w = container.clientWidth || 100;
-  const h = container.clientHeight || 100;
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
-  camera.position.z = 2.5;
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setSize(w, h);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  container.appendChild(renderer.domElement);
-  const sphere = new THREE.Mesh(
-    new THREE.SphereGeometry(0.6, 32, 32),
-    new THREE.MeshStandardMaterial({
-      color: 0xffaa33,
-      metalness: 0.8, roughness: 0.25,
-      emissive: 0x664400, emissiveIntensity: 0.15
-    })
-  );
-  scene.add(sphere);
-  const gridSphere = new THREE.Mesh(
-    new THREE.SphereGeometry(0.62, 24, 24),
-    new THREE.MeshBasicMaterial({
-      wireframe: true, color: 0xffcc44, transparent: true, opacity: 0.2
-    })
-  );
-  scene.add(gridSphere);
-  const light1 = new THREE.DirectionalLight(0xffcc88, 1.5);
-  light1.position.set(5, 3, 5);
-  scene.add(light1);
-  const light2 = new THREE.PointLight(0xffaa33, 0.5);
-  light2.position.set(-3, -1, 2);
-  scene.add(light2);
-  scene.add(new THREE.AmbientLight(0x442200));
-  function animate() {
-    requestAnimationFrame(animate);
-    sphere.rotation.y += 0.015;
-    gridSphere.rotation.y += 0.01;
-    renderer.render(scene, camera);
-  }
-  animate();
 }
 
 function loadJSON(key, def) {

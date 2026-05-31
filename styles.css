@@ -40,14 +40,6 @@ html, body {
 .logo-text-wrap {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
 }
-#logo-globe-wrap {
-  width: 100px; height: 100px; margin: 0 auto 6px;
-  border-radius: 50%; overflow: hidden;
-  background: transparent;
-}
-#logo-globe { width: 100%; height: 100%; }
-#logo-globe canvas { display: block; width: 100% !important; height: 100% !important; }
-
 .logo-main {
   font-size: 4.5rem; font-weight: 900; letter-spacing: 0.15em;
   background: linear-gradient(135deg, rgba(200,210,255,0.2), rgba(180,220,255,0.25), rgba(200,180,255,0.2));
@@ -69,7 +61,6 @@ html, body {
 
 @media (max-width: 480px) {
   #home-logo { gap: 6px; }
-  #logo-globe-wrap { width: 60px; height: 60px; }
   .logo-main { font-size: 2.5rem; letter-spacing: 0.1em; }
   .logo-deco { width: 20px; height: 40px; }
 }
