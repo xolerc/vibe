@@ -72,7 +72,8 @@ function initMusicPlayer() {
     { video: V_PATH + '/2_5458751034891467046.mp4', name: 'Video 9', artist: '' },
     { video: V_PATH + '/2_5235775282278869717.mp4', name: 'Video 10', artist: '' },
     { video: V_PATH + '/2_5458751034891467056.mp4', name: 'Video 11', artist: '' },
-    { video: V_PATH + '/2_5458622658318987050.mp4', name: 'Video 12', artist: '' }
+    { video: V_PATH + '/2_5458622658318987050.mp4', name: 'Video 12', artist: '' },
+    { video: 'video13.mp4', name: 'Video 13', artist: '' }
   ];
   const musicTracks = [
     { file: '2_5287781263149656497.mp3', name: 'Track 1', artist: 'XOLERIC' },
