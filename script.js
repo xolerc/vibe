@@ -39,66 +39,211 @@ function initNeurons() {
 
   const COUNT = 80;
   const CONN_DIST = 0.12;
+
+  // signal travelling along a connection
+  let travellingSignals = [];
+
   const neurons = Array.from({ length: COUNT }, () => ({
     x: Math.random(), y: Math.random(),
     vx: (Math.random() - 0.5) * 0.0004,
     vy: (Math.random() - 0.5) * 0.0004,
     phase: Math.random() * Math.PI * 2,
     size: 2 + Math.random() * 3,
-    isGold: Math.random() > 0.5
+    isGold: Math.random() > 0.5,
+    charge: Math.random() * 0.25,
+    firing: 0,
+    neighbors: []
   }));
+
+  // Pre-compute neighbor lists for signal propagation
+  for (let i = 0; i < COUNT; i++) {
+    for (let j = i + 1; j < COUNT; j++) {
+      const dx = neurons[i].x - neurons[j].x;
+      const dy = neurons[i].y - neurons[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < CONN_DIST * 1.1) {
+        neurons[i].neighbors.push({ neuron: neurons[j], dist });
+        neurons[j].neighbors.push({ neuron: neurons[i], dist });
+      }
+    }
+  }
 
   requestAnimationFrame(function frame(t) {
     t /= 1000;
 
     let bass = 0;
+    let prevBass = 0;
     if (audioAnalyser) {
       const data = new Uint8Array(audioAnalyser.frequencyBinCount);
       audioAnalyser.getByteFrequencyData(data);
       const bins = Math.min(5, data.length);
       for (let i = 0; i < bins; i++) bass += data[i];
       bass = bass / bins / 255;
+      prevBass = bass;
     }
 
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-
+    // ─── Update physics ───
     neurons.forEach(n => {
       n.x += n.vx * (1 + bass * 2);
       n.y += n.vy * (1 + bass * 2);
       if (n.x < 0 || n.x > 1) n.vx *= -1;
       if (n.y < 0 || n.y > 1) n.vy *= -1;
-      const px = n.x * w, py = n.y * h;
-      const pulse = 1 + Math.sin(t * 2 + n.phase) * (0.15 + bass * 0.35);
-      const r = n.size * pulse;
-      const glowMult = 1.8 + bass * 3;
-      const color = n.isGold ? '255,215,0' : '255,255,255';
-      ctx.beginPath();
-      ctx.arc(px, py, r * glowMult, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${color},${0.08 + bass * 0.12})`;
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(px, py, r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${color},${0.9 + bass * 0.1})`;
-      ctx.fill();
+
+      // Charge accumulates from bass energy
+      n.charge += bass * 0.035 * (0.8 + Math.random() * 0.4);
+
+      // Trigger fire when charge full
+      if (n.charge >= 1 && n.firing < 0.1) {
+        n.firing = 2;
+        n.charge = 0;
+        n.neighbors.forEach(nb => {
+          if (nb.neuron.firing < 0.1) {
+            nb.neuron.charge = Math.min(1, nb.neuron.charge + 0.55);
+          }
+          // Spawn travelling signal
+          travellingSignals.push({
+            from: n,
+            to: nb.neuron,
+            progress: 0,
+            speed: 0.02 + Math.random() * 0.02
+          });
+        });
+      }
+
+      // Random triggered from loud bass
+      if (bass > 0.5 && Math.random() < bass * 0.06 && n.firing < 0.1) {
+        n.firing = 1.5;
+        n.charge = 0;
+        n.neighbors.forEach(nb => {
+          if (nb.neuron.firing < 0.1) {
+            nb.neuron.charge = Math.min(1, nb.neuron.charge + 0.4);
+          }
+          travellingSignals.push({
+            from: n,
+            to: nb.neuron,
+            progress: 0,
+            speed: 0.02 + Math.random() * 0.02
+          });
+        });
+      }
+
+      // Decay firing
+      if (n.firing > 0) n.firing *= 0.96;
+      if (n.firing < 0.01) n.firing = 0;
+
+      // Slow charge leak
+      n.charge *= 0.997;
     });
 
+    // ─── Update travelling signals ───
+    for (let s = travellingSignals.length - 1; s >= 0; s--) {
+      travellingSignals[s].progress += travellingSignals[s].speed;
+      if (travellingSignals[s].progress >= 1) {
+        travellingSignals.splice(s, 1);
+      }
+    }
+
+    // ─── Draw ───
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw connections
     for (let i = 0; i < COUNT; i++) {
       for (let j = i + 1; j < COUNT; j++) {
         const dx = neurons[i].x - neurons[j].x;
         const dy = neurons[i].y - neurons[j].y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < CONN_DIST) {
+          const fi = neurons[i].firing;
+          const fj = neurons[j].firing;
+          const maxFire = Math.max(fi, fj);
+          const baseAlpha = (1 - dist / CONN_DIST) * 0.35;
+          let alpha = baseAlpha + bass * 0.2;
+          let width = 1 + bass * 0.5;
+          if (maxFire > 0.1) {
+            alpha = Math.min(1, baseAlpha + maxFire * 0.6);
+            width = 1 + maxFire * 4;
+          }
           ctx.beginPath();
           ctx.moveTo(neurons[i].x * w, neurons[i].y * h);
           ctx.lineTo(neurons[j].x * w, neurons[j].y * h);
-          ctx.strokeStyle = `rgba(255,255,255,${(1 - dist / CONN_DIST) * (0.5 + bass * 0.5)})`;
-          ctx.lineWidth = 1 + bass * 1.5;
+          ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+          ctx.lineWidth = width;
           ctx.stroke();
         }
       }
     }
+
+    // Draw travelling signal pulses on connections
+    travellingSignals.forEach(s => {
+      const p = s.progress;
+      const ax = s.from.x * w, ay = s.from.y * h;
+      const bx = s.to.x * w, by = s.to.y * h;
+      const px = ax + (bx - ax) * p;
+      const py = ay + (by - ay) * p;
+      const intensity = Math.sin(p * Math.PI) * 1.5;
+      ctx.beginPath();
+      ctx.arc(px, py, 3 + intensity * 4, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${intensity * 0.8})`;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(px, py, 8 + intensity * 6, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(200,220,255,${intensity * 0.15})`;
+      ctx.fill();
+    });
+
+    // Draw neurons
+    neurons.forEach(n => {
+      const px = n.x * w, py = n.y * h;
+      const pulse = 1 + Math.sin(t * 2 + n.phase) * (0.15 + bass * 0.25);
+      const r = n.size * pulse;
+
+      let color, glowAlpha, coreAlpha, glowMult;
+
+      if (n.firing > 0.1) {
+        // FIRING — bright explosion
+        color = '255,255,255';
+        glowAlpha = 0.1 + n.firing * 0.35;
+        coreAlpha = Math.min(1, 0.9 + n.firing * 0.1);
+        glowMult = 1.8 + n.firing * 5;
+      } else if (n.charge > 0.6) {
+        // CHARGED — icy blue
+        color = '180,210,255';
+        glowAlpha = 0.08 + bass * 0.08 + n.charge * 0.08;
+        coreAlpha = 0.85;
+        glowMult = 1.8 + n.charge * 1.5;
+      } else {
+        // IDLE
+        color = n.isGold ? '255,215,0' : '255,255,255';
+        glowAlpha = 0.06 + bass * 0.06;
+        coreAlpha = 0.85 + bass * 0.05;
+        glowMult = 1.6 + bass * 1.5;
+      }
+
+      // Glow
+      ctx.beginPath();
+      ctx.arc(px, py, r * glowMult, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${color},${glowAlpha})`;
+      ctx.fill();
+
+      // Core
+      ctx.beginPath();
+      ctx.arc(px, py, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${color},${coreAlpha})`;
+      ctx.fill();
+
+      // Shockwave ring on firing
+      if (n.firing > 0.3) {
+        const ringR = r * (1 + (1.5 - n.firing) * 4);
+        ctx.beginPath();
+        ctx.arc(px, py, ringR, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255,255,255,${n.firing * 0.25})`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    });
+
     ctx.restore();
     requestAnimationFrame(frame);
   });
