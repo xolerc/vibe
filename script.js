@@ -64,21 +64,17 @@ function initMusicPlayer() {
   let progressInterval = null;
   let playlistTimer = null;
 
-  function setPlayingUI(on) {
+  function setUI(on) {
     playIcon.style.display = on ? 'none' : '';
     pauseIcon.style.display = on ? '' : 'none';
     isPlaying = on;
   }
 
   const queries = [
-    '50 Cent best hits',
-    'Eminem greatest hits',
-    'Snoop Dogg best songs',
-    'global rap hits 2026',
-    'hip hop classics legends',
-    "o'zbek rap hitlari 2025 2026",
-    'uzbek pop eng sara qoshiqlar',
-    'worldwide hip hop mix best'
+    '50 Cent best hits', 'Eminem greatest hits',
+    'Snoop Dogg best songs', 'global rap hits 2026',
+    'hip hop classics', "o'zbek rap hitlari",
+    'uzbek pop eng sara', 'worldwide hip hop mix'
   ];
 
   function shuffle(a) {
@@ -89,31 +85,41 @@ function initMusicPlayer() {
     return a;
   }
 
+  function status(msg) {
+    trackName.textContent = msg;
+    trackArtist.textContent = '';
+  }
+
   async function fetchPlaylist() {
+    status('Loading songs...');
     const all = [];
     const qs = shuffle([...queries]).slice(0, 4);
     for (const q of qs) {
       try {
-        const r = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&maxResults=10&q=${encodeURIComponent(q)}&key=${YT_KEY}`);
+        const r = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&maxResults=8&q=${encodeURIComponent(q)}&key=${YT_KEY}`
+        );
+        if (!r.ok) continue;
         const d = await r.json();
         if (d.items) {
           d.items.forEach(i => {
-            all.push({
-              id: i.id.videoId,
-              name: i.snippet.title.replace(/\([^)]*\)|\[[^\]]*\]/g, '').trim(),
-              artist: i.snippet.channelTitle
-            });
+            if (i.id.videoId) {
+              all.push({
+                id: i.id.videoId,
+                name: i.snippet.title.replace(/\([^)]*\)|\[[^\]]*\]/g, '').trim().substring(0, 40) || 'Unknown',
+                artist: i.snippet.channelTitle
+              });
+            }
           });
         }
       } catch {}
     }
-    if (all.length) {
-      playlist = shuffle(all);
-      if (playlist.length > 40) playlist = playlist.slice(0, 40);
-      if (!ytPlayer || !ytReady) return;
-      if (ytPlayer.getPlayerState?.() === -1 || ytPlayer.getPlayerState?.() === 5) {
-        loadTrack(0);
-      }
+    if (!all.length) { status('No songs loaded — tap play'); return; }
+    playlist = shuffle(all);
+    if (playlist.length > 32) playlist = playlist.slice(0, 32);
+    if (ytPlayer && ytReady) {
+      const st = ytPlayer.getPlayerState();
+      if (st === -1 || st === 5) loadTrack(0);
     }
   }
 
@@ -121,71 +127,74 @@ function initMusicPlayer() {
     if (!playlist.length || !ytPlayer || !ytReady) return;
     currentTrack = ((index % playlist.length) + playlist.length) % playlist.length;
     const t = playlist[currentTrack];
-    trackName.textContent = t.name.substring(0, 30);
-    trackArtist.textContent = t.artist.substring(0, 20);
+    trackName.textContent = t.name;
+    trackArtist.textContent = t.artist;
     progressFill.style.width = '0%';
     ytPlayer.loadVideoById(t.id);
-    ytPlayer.seekTo(0);
   }
 
   function doPlay() {
     if (!ytPlayer || !ytReady) return;
-    if (playlist.length) {
-      ytPlayer.playVideo();
-      setPlayingUI(true);
-      if (globe) globe.resume();
-      startProgress();
-    }
+    if (!playlist.length) { fetchPlaylist(); return; }
+    ytPlayer.playVideo();
+    setUI(true);
+    if (globe) globe.resume();
   }
 
   function pause() {
     if (!ytPlayer) return;
     ytPlayer.pauseVideo();
-    setPlayingUI(false);
+    setUI(false);
     if (globe) globe.pause();
-    stopProgress();
   }
 
-  function startProgress() {
-    stopProgress();
-    progressInterval = setInterval(() => {
-      if (!ytPlayer || !ytReady) return;
-      const dur = ytPlayer.getDuration();
-      const cur = ytPlayer.getCurrentTime();
-      if (dur) progressFill.style.width = (cur / dur * 100) + '%';
-    }, 500);
+  function nextTrack() {
+    if (!playlist.length) return;
+    loadTrack(currentTrack + 1);
+    setUI(true);
+    if (globe) globe.resume();
   }
-
-  function stopProgress() {
-    if (progressInterval) { clearInterval(progressInterval); progressInterval = null; }
-  }
-
-  function nextTrack() { loadTrack(currentTrack + 1); doPlay(); }
   function prevTrack() {
+    if (!playlist.length) return;
     if (ytPlayer && ytPlayer.getCurrentTime() > 3) { ytPlayer.seekTo(0); return; }
-    loadTrack(currentTrack - 1); doPlay();
+    loadTrack(currentTrack - 1);
+    setUI(true);
+    if (globe) globe.resume();
   }
 
   function onPlayerState(e) {
-    if (e.data === YT.PlayerState.PLAYING) {
-      setPlayingUI(true);
+    const s = e.data;
+    if (s === 1) {
+      setUI(true);
       if (globe) globe.resume();
-      startProgress();
-    } else if (e.data === YT.PlayerState.PAUSED) {
-      setPlayingUI(false);
+      if (progressInterval) { clearInterval(progressInterval); }
+      progressInterval = setInterval(() => {
+        if (!ytPlayer || !ytReady) return;
+        const dur = ytPlayer.getDuration();
+        const cur = ytPlayer.getCurrentTime();
+        if (dur) progressFill.style.width = (cur / dur * 100) + '%';
+      }, 500);
+    } else if (s === 2) {
+      setUI(false);
       if (globe) globe.pause();
-      stopProgress();
-    } else if (e.data === YT.PlayerState.ENDED) {
-      nextTrack();
+      if (progressInterval) { clearInterval(progressInterval); progressInterval = null; }
+    } else if (s === 0) {
+      if (playlist.length) nextTrack();
     }
   }
 
   function initPlayer() {
-    ytPlayer = new YT.Player('yt-hidden-player', {
-      height: '0', width: '0',
-      playerVars: { autoplay: 0, controls: 0, modestbranding: 1, rel: 0 },
-      events: { onReady: () => { ytReady = true; fetchPlaylist(); }, onStateChange: onPlayerState }
-    });
+    try {
+      ytPlayer = new YT.Player('yt-hidden-player', {
+        height: '0', width: '0',
+        playerVars: { autoplay: 0, controls: 0, modestbranding: 1, rel: 0 },
+        events: {
+          onReady: () => { ytReady = true; fetchPlaylist(); },
+          onStateChange: onPlayerState,
+          onError: () => { status('YouTube error — retrying...'); }
+        }
+      });
+    } catch { status('Player init failed'); }
   }
 
   playBtn.addEventListener('click', () => {
@@ -198,8 +207,7 @@ function initMusicPlayer() {
   progressBar.addEventListener('click', (e) => {
     if (!ytPlayer || !ytReady) return;
     const rect = progressBar.getBoundingClientRect();
-    const pct = (e.clientX - rect.left) / rect.width;
-    ytPlayer.seekTo(pct * ytPlayer.getDuration());
+    ytPlayer.seekTo(((e.clientX - rect.left) / rect.width) * ytPlayer.getDuration());
   });
 
   if (typeof YT !== 'undefined' && YT.Player) {
