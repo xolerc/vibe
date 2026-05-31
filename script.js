@@ -1000,6 +1000,8 @@ function hideAllPages() {
   pageChat.classList.remove('open');
   pageAdmin.classList.remove('open');
   document.getElementById('emoji-picker').classList.remove('open');
+  const g = document.getElementById('media-gallery');
+  if (g) g.classList.remove('open');
 }
 function deactivateAllNav() {
   navHome.classList.remove('active');
