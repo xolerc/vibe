@@ -80,8 +80,8 @@ function initNeurons() {
           ctx.beginPath();
           ctx.moveTo(neurons[i].x * w, neurons[i].y * h);
           ctx.lineTo(neurons[j].x * w, neurons[j].y * h);
-          ctx.strokeStyle = `rgba(255,215,0,${(1 - dist / CONN_DIST) * 0.25})`;
-          ctx.lineWidth = 0.8;
+          ctx.strokeStyle = `rgba(255,255,255,${(1 - dist / CONN_DIST) * 0.5})`;
+          ctx.lineWidth = 1;
           ctx.stroke();
         }
       }
