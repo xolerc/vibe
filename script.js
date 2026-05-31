@@ -72,6 +72,13 @@ function initMusicPlayer() {
   const trackArtist = document.getElementById('track-artist');
 
   let globe;
+  const playIcon = document.getElementById('play-icon');
+  const pauseIcon = document.getElementById('pause-icon');
+
+  function setPlayingUI(on) {
+    playIcon.style.display = on ? 'none' : '';
+    pauseIcon.style.display = on ? '' : 'none';
+  }
 
   function loadTrack(index) {
     const t = tracks[index];
@@ -84,13 +91,13 @@ function initMusicPlayer() {
 
   function play() {
     audio.play();
-    playBtn.textContent = '⏸';
+    setPlayingUI(true);
     if (globe) globe.resume();
   }
 
   function pause() {
     audio.pause();
-    playBtn.textContent = '▶';
+    setPlayingUI(false);
     if (globe) globe.pause();
   }
 
@@ -110,14 +117,14 @@ function initMusicPlayer() {
     } else {
       const prev = (currentTrack - 1 + tracks.length) % tracks.length;
       loadTrack(prev);
-      if (!audio.paused) play();
     }
+    play();
   });
 
   nextBtn.addEventListener('click', () => {
     const next = (currentTrack + 1) % tracks.length;
     loadTrack(next);
-    if (!audio.paused) play();
+    play();
   });
 
   audio.addEventListener('timeupdate', () => {
@@ -133,8 +140,9 @@ function initMusicPlayer() {
   });
 
   audio.addEventListener('ended', () => {
-    playBtn.textContent = '▶';
-    if (globe) globe.pause();
+    const next = (currentTrack + 1) % tracks.length;
+    loadTrack(next);
+    play();
   });
 
   globe = initGlobe();
