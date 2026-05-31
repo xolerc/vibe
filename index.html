@@ -68,6 +68,7 @@
     <div id="chat-panel">
       <div id="chat-header">
         <span>Chat</span>
+        <span id="chat-status" style="font-size:0.65rem;color:#666;font-weight:400;"></span>
         <button id="chat-close">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -86,7 +87,37 @@
     </div>
   </div>
 
+  <div id="admin-panel" style="display:none">
+    <div id="admin-header">
+      <span>Admin Panel</span>
+      <button id="admin-close">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div id="admin-users">
+      <div style="padding:10px 14px;color:#666;font-size:0.75rem;">Connected users:</div>
+      <div id="admin-user-list"></div>
+    </div>
+    <div id="admin-chat-box">
+      <div id="admin-messages"></div>
+      <div id="admin-input-bar">
+        <span id="admin-reply-to" style="display:none;"></span>
+        <div id="admin-input-bar-inner">
+          <input id="admin-input" type="text" placeholder="Reply..." maxlength="500">
+          <button id="admin-send">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
