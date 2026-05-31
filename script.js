@@ -501,6 +501,8 @@ function selectAdminUser(userId) {
   }
   renderAdminUserList();
   renderAdminMessages(userId);
+  /* Mobile: show chat view */
+  document.getElementById('admin-body').classList.add('show-chat');
 }
 
 function renderAdminMessages(userId) {
@@ -567,6 +569,78 @@ function initAdmin() {
   const adminMessages = document.getElementById('admin-messages');
   const adminInput = document.getElementById('admin-input');
   const adminSend = document.getElementById('admin-send');
+  const adminBody = document.getElementById('admin-body');
+  const backBtn = document.getElementById('admin-back-btn');
+
+  /* Admin emoji picker */
+  const adminEmojiBtn = document.getElementById('admin-emoji-btn');
+  const adminEmojiPicker = document.getElementById('admin-emoji-picker');
+  const adminEmojiGrid = document.getElementById('admin-emoji-grid');
+  const EMOJIS = '😀😃😄😁😅😂🤣😊😇🙂😉😌😍🥰😘😗😋😛😜🤪😝🤑🤗🤭🤫🤔🤐🤨😐😑😶😏😒🙄😬🤥😌😔😪🤤😴😷🤒🤕🤢🤮🤧🥵🥶🥴😵🤯🤠🥳🥸😎🤓🧐😕😟🙁😮😯😲😳🥺😢😭😤😠😡🤬😈👿💀☠💩🤡👹👺👻👽👾🤖💋💌💘💝💖💗💓💞💕💟❣💔❤🧡💛💚💙💜🤎🖤🤍💯💢💥💫💦💨🕳💣💬🗨🗯💭';
+  EMOJIS.split('').forEach(e => {
+    const span = document.createElement('span');
+    span.textContent = e;
+    span.addEventListener('click', () => {
+      adminInput.focus();
+      const start = adminInput.selectionStart;
+      const end = adminInput.selectionEnd;
+      adminInput.value = adminInput.value.substring(0, start) + e + adminInput.value.substring(end);
+      adminInput.selectionStart = adminInput.selectionEnd = start + e.length;
+      adminInput.dispatchEvent(new Event('input'));
+      adminEmojiPicker.classList.remove('open');
+    });
+    adminEmojiGrid.appendChild(span);
+  });
+  adminEmojiBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    adminEmojiPicker.classList.toggle('open');
+  });
+  document.addEventListener('click', (e) => {
+    if (adminEmojiPicker && !adminEmojiPicker.contains(e.target) && e.target !== adminEmojiBtn) {
+      adminEmojiPicker.classList.remove('open');
+    }
+  });
+
+  /* Admin file attach */
+  const adminAttachBtn = document.getElementById('admin-attach-btn');
+  const adminFileInput = document.getElementById('admin-file-input');
+  adminAttachBtn.addEventListener('click', () => adminFileInput.click());
+  adminFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 500 * 1024) { alert('File too large (max 500KB)'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result;
+      const isImage = file.type.startsWith('image/');
+
+      const ad = loadJSON('vibe_admin_data', {});
+      if (!ad[selectedAdminUser]) ad[selectedAdminUser] = { messages: [], unread: 0 };
+      ad[selectedAdminUser].messages.push({
+        sender: 'admin', text: dataUrl, time: Date.now(),
+        isImage, isFile: !isImage, fileName: isImage ? null : file.name
+      });
+      saveJSON('vibe_admin_data', ad);
+      renderAdminMessages(selectedAdminUser);
+      renderAdminUserList();
+
+      fbSend({
+        senderId: 'admin', targetId: selectedAdminUser,
+        text: dataUrl, time: Date.now(),
+        isImage, isFile: !isImage, fileName: isImage ? null : file.name
+      });
+    };
+    reader.readAsDataURL(file);
+    adminFileInput.value = '';
+  });
+
+  /* Back button */
+  backBtn.addEventListener('click', () => {
+    adminBody.classList.remove('show-chat');
+    selectedAdminUser = null;
+    document.getElementById('admin-current-user').textContent = 'Select a user';
+    renderAdminUserList();
+  });
 
   /* Immediate sync */
   fbFetchAll().then(data => processFirebaseMessages(data));
@@ -603,7 +677,6 @@ function initAdmin() {
     const text = adminInput.value.trim();
     if (!text || !selectedAdminUser) return;
 
-    /* Save to admin_data */
     const ad = loadJSON('vibe_admin_data', {});
     if (!ad[selectedAdminUser]) ad[selectedAdminUser] = { messages: [], unread: 0 };
     ad[selectedAdminUser].messages.push({ sender: 'admin', text, time: Date.now() });
@@ -611,13 +684,11 @@ function initAdmin() {
     renderAdminMessages(selectedAdminUser);
     renderAdminUserList();
 
-    /* Save to user's chat history */
     const userMsg = { text, type: 'other', time: Date.now() };
     const chatHistory = loadJSON('vibe_chat', []);
     chatHistory.push(userMsg);
     saveJSON('vibe_chat', chatHistory);
 
-    /* Send to Firebase */
     fbSend({ senderId: 'admin', targetId: selectedAdminUser, text, time: Date.now() });
 
     adminInput.value = '';
@@ -639,11 +710,14 @@ function switchPage(page) {
   pageChat.classList.toggle('open', page === 'chat');
   if (page !== 'admin') {
     pageAdmin.classList.remove('open');
+    document.getElementById('admin-body').classList.remove('show-chat');
     document.getElementById('nav-chat').querySelector('span').textContent = 'Chat';
   } else {
     pageChat.classList.remove('open');
   }
   document.getElementById('emoji-picker').classList.remove('open');
+  const adminEp = document.getElementById('admin-emoji-picker');
+  if (adminEp) adminEp.classList.remove('open');
 }
 
 navHome.addEventListener('click', () => switchPage('home'));

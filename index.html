@@ -72,22 +72,28 @@
       </div>
       <div id="admin-chat-col">
         <div id="admin-chat-header">
+          <button id="admin-back-btn">←</button>
           <span id="admin-current-user">Select a user</span>
         </div>
         <div id="admin-messages">
           <div class="chat-empty">Select a user from the list</div>
         </div>
         <div id="admin-input-bar">
-          <span id="admin-reply-to" style="display:none"></span>
-          <div id="admin-input-row">
-            <input id="admin-input" type="text" placeholder="Reply..." maxlength="500">
-            <button id="admin-send" class="chat-act-btn">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9"/></svg>
-            </button>
-          </div>
+          <button id="admin-emoji-btn" class="chat-act-btn">☺</button>
+          <button id="admin-attach-btn" class="chat-act-btn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+          <input id="admin-input" type="text" placeholder="Reply..." maxlength="500">
+          <button id="admin-send" class="chat-act-btn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9"/></svg>
+          </button>
         </div>
       </div>
     </div>
+    <div id="admin-emoji-picker">
+      <div id="admin-emoji-grid"></div>
+    </div>
+    <input id="admin-file-input" type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" style="display:none">
   </div>
 
   <div id="bottom-nav">
