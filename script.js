@@ -354,8 +354,13 @@ function makeBubble(text, type, ts, opts) {
     img.className = 'chat-img'; img.src = text;
     img.addEventListener('click', () => openModal(text));
     div.appendChild(img);
+    const dl = document.createElement('button');
+    dl.className = 'dl-btn'; dl.textContent = '⬇ Download';
+    dl.addEventListener('click', () => { const a = document.createElement('a'); a.href = text; a.download = 'image.jpg'; a.click(); });
+    div.appendChild(dl);
   } else if (opts.isFile) {
     const isVideo = opts.fileName && /\.(mp4|webm|ogg|mov)$/i.test(opts.fileName);
+    const isAudio = opts.fileName && /\.(mp3|wav|ogg|m4a|aac)$/i.test(opts.fileName);
     if (isVideo) {
       const v = document.createElement('video');
       v.src = text; v.controls = true; v.playsInline = true; v.preload = 'metadata';
@@ -365,6 +370,15 @@ function makeBubble(text, type, ts, opts) {
       lbl.textContent = opts.fileName;
       lbl.style.cssText = 'font-size:0.65rem;color:#8ab;margin-bottom:2px';
       div.insertBefore(lbl, v);
+    } else if (isAudio) {
+      const aEl = document.createElement('audio');
+      aEl.src = text; aEl.controls = true; aEl.preload = 'metadata';
+      aEl.style.cssText = 'max-width:100%;height:36px;border-radius:6px;display:block;margin-bottom:4px';
+      div.appendChild(aEl);
+      const lbl = document.createElement('div');
+      lbl.textContent = opts.fileName;
+      lbl.style.cssText = 'font-size:0.65rem;color:#8ab;margin-bottom:2px';
+      div.appendChild(lbl);
     } else {
       const a = document.createElement('a');
       a.href = text; a.target = '_blank';
@@ -372,6 +386,10 @@ function makeBubble(text, type, ts, opts) {
       a.style.color = '#8ab'; a.style.textDecoration = 'underline';
       div.appendChild(a);
     }
+    const dl = document.createElement('button');
+    dl.className = 'dl-btn'; dl.textContent = '⬇ Download';
+    dl.addEventListener('click', () => { const a = document.createElement('a'); a.href = text; a.download = opts.fileName || 'file'; a.click(); });
+    div.appendChild(dl);
   } else {
     const t = document.createElement('span');
     t.textContent = text;
@@ -598,6 +616,8 @@ function startChatAnim() {
 }
 
 /* ─── Regular Chat ─── */
+let sharedMedia = [];
+
 function initChat() {
   const container = document.getElementById('chat-messages');
   const input = document.getElementById('chat-input');
@@ -626,18 +646,70 @@ function initChat() {
     if (!emojiPick.contains(e.target) && e.target !== emojiBtn) emojiPick.classList.remove('open');
   });
 
-  attachBtn.addEventListener('click', () => fileInput.click());
+  /* ─── Gallery ─── */
+  const gallery = document.getElementById('media-gallery');
+  const galleryGrid = document.getElementById('media-gallery-grid');
+  const galleryClose = document.getElementById('media-gallery-close');
+  const galleryAdd = document.getElementById('media-gallery-add-btn');
+
+  function renderGallery() {
+    galleryGrid.innerHTML = '';
+    const addDiv = document.createElement('div');
+    addDiv.className = 'media-item add-media';
+    addDiv.textContent = '+';
+    addDiv.addEventListener('click', () => fileInput.click());
+    galleryGrid.appendChild(addDiv);
+    sharedMedia.forEach((m, idx) => {
+      const d = document.createElement('div');
+      d.className = 'media-item';
+      if (m.isImage) {
+        const img = document.createElement('img');
+        img.src = m.data;
+        d.appendChild(img);
+      } else {
+        const icon = document.createElement('span');
+        icon.className = 'media-icon';
+        icon.textContent = m.isAudio ? '🎵' : '🎬';
+        d.appendChild(icon);
+        const badge = document.createElement('span');
+        badge.className = 'media-type-badge';
+        badge.textContent = m.isAudio ? 'MP3' : 'VIDEO';
+        d.appendChild(badge);
+      }
+      d.addEventListener('click', () => {
+        gallery.classList.remove('open');
+        const msg = { text: m.data, type: 'own', time: Date.now(), isImage: m.isImage, isFile: !m.isImage, fileName: m.fileName };
+        appendMsg(container, msg);
+        fbSend({ senderId: isAdmin ? 'admin' : myId, text: m.data, time: msg.time, isImage: m.isImage, isFile: !m.isImage, fileName: msg.fileName });
+      });
+      galleryGrid.appendChild(d);
+    });
+  }
+
+  attachBtn.addEventListener('click', () => {
+    emojiPick.classList.remove('open');
+    gallery.classList.toggle('open');
+    if (gallery.classList.contains('open')) renderGallery();
+  });
+  galleryClose.addEventListener('click', () => gallery.classList.remove('open'));
+  document.addEventListener('click', e => {
+    if (!gallery.contains(e.target) && e.target !== attachBtn) gallery.classList.remove('open');
+  });
+  galleryAdd.addEventListener('click', () => fileInput.click());
+
   fileInput.addEventListener('change', e => {
     const f = e.target.files[0];
     if (!f) return;
-    if (f.size > 500*1024) { alert('File too large (max 500KB)'); return; }
     const r = new FileReader();
     r.onload = ev => {
       const isImg = f.type.startsWith('image/');
-      const sid = isAdmin ? 'admin' : myId;
-      const msg = { text: ev.target.result, type: 'own', time: Date.now(), isImage: isImg, isFile: !isImg, fileName: isImg ? null : f.name };
+      const isAudio = f.type.startsWith('audio/');
+      const dataUri = ev.target.result;
+      sharedMedia.push({ data: dataUri, isImage: isImg, isAudio: isAudio, fileName: isImg ? null : f.name });
+      renderGallery();
+      const msg = { text: dataUri, type: 'own', time: Date.now(), isImage: isImg, isFile: !isImg, fileName: isImg ? null : f.name };
       appendMsg(container, msg);
-      fbSend({ senderId: sid, text: ev.target.result, time: msg.time, isImage: isImg, isFile: !isImg, fileName: msg.fileName });
+      fbSend({ senderId: isAdmin ? 'admin' : myId, text: dataUri, time: msg.time, isImage: isImg, isFile: !isImg, fileName: msg.fileName });
     };
     r.readAsDataURL(f);
     fileInput.value = '';
@@ -823,20 +895,22 @@ function initAdmin() {
   aFile.addEventListener('change', e => {
     const f = e.target.files[0];
     if (!f || !selectedAdmUser) return;
-    if (f.size > 500*1024) { alert('File too large (max 500KB)'); return; }
     const r = new FileReader();
     r.onload = ev => {
       const isImg = f.type.startsWith('image/');
+      const isAudio = f.type.startsWith('audio/');
+      const dataUri = ev.target.result;
+      sharedMedia.push({ data: dataUri, isImage: isImg, isAudio: isAudio, fileName: isImg ? null : f.name });
       const admData = loadJSON('vibe_admin_data', {});
       if (!admData[selectedAdmUser]) admData[selectedAdmUser] = { messages: [], unread: 0 };
       admData[selectedAdmUser].messages.push({
-        sender: 'admin', text: ev.target.result, time: Date.now(),
+        sender: 'admin', text: dataUri, time: Date.now(),
         isImage: isImg, isFile: !isImg, fileName: isImg ? null : f.name
       });
       saveJSON('vibe_admin_data', admData);
       renderAdmMessages(selectedAdmUser);
       renderUserList();
-      fbSend({ senderId: 'admin', targetId: selectedAdmUser, text: ev.target.result, time: Date.now(), isImage: isImg, isFile: !isImg, fileName: isImg ? null : f.name });
+      fbSend({ senderId: 'admin', targetId: selectedAdmUser, text: dataUri, time: Date.now(), isImage: isImg, isFile: !isImg, fileName: isImg ? null : f.name });
     };
     r.readAsDataURL(f);
     aFile.value = '';
