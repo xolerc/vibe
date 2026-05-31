@@ -73,7 +73,7 @@ function initMusicPlayer() {
     { video: V_PATH + '/2_5235775282278869717.mp4', name: 'Video 10', artist: '' },
     { video: V_PATH + '/2_5458751034891467056.mp4', name: 'Video 11', artist: '' },
     { video: V_PATH + '/2_5458622658318987050.mp4', name: 'Video 12', artist: '' },
-    { video: 'video13.mp4', name: 'Video 13', artist: '' }
+    { video: 'https://xolerc.github.io/vibe/video13.mp4', name: 'Video 13', artist: '' }
   ];
   const musicTracks = [
     { file: 'track0.mp3', name: 'VOCE NA MIRA', artist: 'Hwungii, DJ VGK1' },
@@ -114,6 +114,7 @@ function initMusicPlayer() {
     if (mode === 'video') {
       mv.src = t.video;
       mv.currentTime = 0;
+      mv.load();
       audio.pause();
       audio.removeAttribute('src');
     } else {
@@ -127,11 +128,15 @@ function initMusicPlayer() {
 
   function doPlay() {
     const src = getPlaySrc();
-    if (!src.src) { loadTrack(currentTrack); return; }
-    src.play().then(() => {
+    if (!src.src || (mode === 'video' && !mv.readyState)) { loadTrack(currentTrack); }
+    const s = getPlaySrc();
+    const tryPlay = () => s.play().then(() => {
       setUI(true);
       if (mode === 'music' && globe) globe.resume();
-    }).catch(() => {});
+    }).catch(() => {
+      if (mode === 'video') s.addEventListener('canplay', () => s.play().catch(() => {}), { once: true });
+    });
+    tryPlay();
   }
 
   function pause() {
