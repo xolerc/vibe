@@ -3,6 +3,42 @@ const loadingScreen = document.getElementById('loading-screen');
 const pageHome = document.getElementById('page-home');
 const loadingVideo = document.getElementById('loading-video');
 
+/* ─── Visitor Counter ─── */
+const VISITOR_KEY = 'vibe_visitor_id';
+let visitorId = localStorage.getItem(VISITOR_KEY);
+if (!visitorId) {
+  visitorId = 'v_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 6);
+  localStorage.setItem(VISITOR_KEY, visitorId);
+}
+
+async function initCounter() {
+  const el = document.getElementById('visit-count');
+  if (!el) return;
+  try {
+    const r = await fetch(FB + '/visits.json');
+    let data = null;
+    if (r.ok) data = await r.json();
+    let count = (data && data.count) || 0;
+    el.textContent = count;
+    // Register new visitor
+    const reg = await fetch(FB + '/visits/visitors/' + visitorId + '.json');
+    if (reg.ok) {
+      const exists = await reg.json();
+      if (!exists) {
+        await fetch(FB + '/visits/visitors/' + visitorId + '.json', {
+          method: 'PUT', body: JSON.stringify(true)
+        });
+        count++;
+        await fetch(FB + '/visits/count.json', {
+          method: 'PUT', body: JSON.stringify(count)
+        });
+        el.textContent = count;
+      }
+    }
+  } catch(e) { console.warn('Counter err', e); }
+}
+initCounter();
+
 function startExperience() {
   loadingScreen.classList.add('hidden');
   pageHome.classList.add('visible');
