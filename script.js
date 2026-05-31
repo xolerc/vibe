@@ -693,7 +693,7 @@ function initChat() {
   });
   galleryClose.addEventListener('click', () => gallery.classList.remove('open'));
   document.addEventListener('click', e => {
-    if (!gallery.contains(e.target) && e.target !== attachBtn) gallery.classList.remove('open');
+    if (!gallery.contains(e.target) && !attachBtn.contains(e.target)) gallery.classList.remove('open');
   });
   galleryAdd.addEventListener('click', () => fileInput.click());
 
