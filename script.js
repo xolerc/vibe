@@ -56,7 +56,7 @@ function initNeurons() {
       const px = n.x * w, py = n.y * h;
       ctx.beginPath();
       ctx.arc(px, py, 1.5, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(100, 180, 255, 0.6)';
+      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.7)' : 'rgba(255,215,0,0.7)';
       ctx.fill();
     });
 
@@ -69,7 +69,7 @@ function initNeurons() {
           ctx.beginPath();
           ctx.moveTo(neurons[i].x * w, neurons[i].y * h);
           ctx.lineTo(neurons[j].x * w, neurons[j].y * h);
-          ctx.strokeStyle = `rgba(100, 180, 255, ${(1 - dist / CONN_DIST) * 0.2})`;
+          ctx.strokeStyle = `rgba(255,215,0,${(1 - dist / CONN_DIST) * 0.15})`;
           ctx.lineWidth = 0.5;
           ctx.stroke();
         }
