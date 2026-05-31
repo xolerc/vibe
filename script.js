@@ -708,7 +708,7 @@ function renderAdmMessages(userId) {
   const admData = loadJSON('vibe_admin_data', {});
   const d = admData[userId];
   if (!d || !d.messages.length) {
-    cont.innerHTML = '<div class="chat-empty">No messages</div>';
+    cont.innerHTML = '<div class="chat-empty">Xabarlar yo\'q</div>';
     return;
   }
   d.messages.forEach(m => {
