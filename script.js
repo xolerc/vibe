@@ -1,4 +1,5 @@
 const FB = 'https://xoleric-9ad1b-default-rtdb.firebaseio.com/vibe';
+const YT_KEY = 'AIzaSyAwpEdIA_5_1aDPoMP0Q_ROE_zTrhoxwKs';
 const loadingScreen = document.getElementById('loading-screen');
 const pageHome = document.getElementById('page-home');
 const loadingVideo = document.getElementById('loading-video');
@@ -44,14 +45,6 @@ function startBackgroundLoop() {
 }
 
 function initMusicPlayer() {
-  const tracks = [
-    { file: 'track0.mp3', name: 'VOCE NA MIRA', artist: 'Hwungii, DJ VGK1' },
-    { file: 'track1.mp3', name: 'NO ERA AMOR', artist: 'DJ Asul' },
-    { file: 'track2.mp3', name: 'AURA', artist: 'Ogryzek' }
-  ];
-  let currentTrack = 0;
-  const audio = new Audio();
-  audio.preload = 'auto';
   const playBtn = document.getElementById('play-btn');
   const prevBtn = document.getElementById('prev-btn');
   const nextBtn = document.getElementById('next-btn');
@@ -59,72 +52,163 @@ function initMusicPlayer() {
   const progressBar = document.getElementById('progress-bar');
   const trackName = document.getElementById('track-name');
   const trackArtist = document.getElementById('track-artist');
-  let globe;
   const playIcon = document.getElementById('play-icon');
   const pauseIcon = document.getElementById('pause-icon');
+  let globe;
+
+  let playlist = [];
+  let currentTrack = 0;
+  let ytPlayer = null;
+  let ytReady = false;
+  let isPlaying = false;
+  let progressInterval = null;
+  let playlistTimer = null;
 
   function setPlayingUI(on) {
     playIcon.style.display = on ? 'none' : '';
     pauseIcon.style.display = on ? '' : 'none';
+    isPlaying = on;
   }
-  let pendingPlay = false;
+
+  const queries = [
+    '50 Cent best hits',
+    'Eminem greatest hits',
+    'Snoop Dogg best songs',
+    'global rap hits 2026',
+    'hip hop classics legends',
+    "o'zbek rap hitlari 2025 2026",
+    'uzbek pop eng sara qoshiqlar',
+    'worldwide hip hop mix best'
+  ];
+
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  async function fetchPlaylist() {
+    const all = [];
+    const qs = shuffle([...queries]).slice(0, 4);
+    for (const q of qs) {
+      try {
+        const r = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&maxResults=10&q=${encodeURIComponent(q)}&key=${YT_KEY}`);
+        const d = await r.json();
+        if (d.items) {
+          d.items.forEach(i => {
+            all.push({
+              id: i.id.videoId,
+              name: i.snippet.title.replace(/\([^)]*\)|\[[^\]]*\]/g, '').trim(),
+              artist: i.snippet.channelTitle
+            });
+          });
+        }
+      } catch {}
+    }
+    if (all.length) {
+      playlist = shuffle(all);
+      if (playlist.length > 40) playlist = playlist.slice(0, 40);
+      if (!ytPlayer || !ytReady) return;
+      if (ytPlayer.getPlayerState?.() === -1 || ytPlayer.getPlayerState?.() === 5) {
+        loadTrack(0);
+      }
+    }
+  }
 
   function loadTrack(index) {
-    const t = tracks[index];
-    audio.src = t.file;
-    trackName.textContent = t.name;
-    trackArtist.textContent = t.artist;
+    if (!playlist.length || !ytPlayer || !ytReady) return;
+    currentTrack = ((index % playlist.length) + playlist.length) % playlist.length;
+    const t = playlist[currentTrack];
+    trackName.textContent = t.name.substring(0, 30);
+    trackArtist.textContent = t.artist.substring(0, 20);
     progressFill.style.width = '0%';
-    currentTrack = index;
+    ytPlayer.loadVideoById(t.id);
+    ytPlayer.seekTo(0);
   }
 
   function doPlay() {
-    audio.play().then(() => {
+    if (!ytPlayer || !ytReady) return;
+    if (playlist.length) {
+      ytPlayer.playVideo();
       setPlayingUI(true);
       if (globe) globe.resume();
-    }).catch(() => {});
-  }
-
-  function play() {
-    if (audio.readyState >= 2) doPlay();
-    else { pendingPlay = true; audio.load(); }
+      startProgress();
+    }
   }
 
   function pause() {
-    audio.pause();
+    if (!ytPlayer) return;
+    ytPlayer.pauseVideo();
     setPlayingUI(false);
     if (globe) globe.pause();
+    stopProgress();
   }
 
-  audio.addEventListener('canplay', () => {
-    if (pendingPlay) { pendingPlay = false; doPlay(); }
-  });
-  loadTrack(0);
+  function startProgress() {
+    stopProgress();
+    progressInterval = setInterval(() => {
+      if (!ytPlayer || !ytReady) return;
+      const dur = ytPlayer.getDuration();
+      const cur = ytPlayer.getCurrentTime();
+      if (dur) progressFill.style.width = (cur / dur * 100) + '%';
+    }, 500);
+  }
+
+  function stopProgress() {
+    if (progressInterval) { clearInterval(progressInterval); progressInterval = null; }
+  }
+
+  function nextTrack() { loadTrack(currentTrack + 1); doPlay(); }
+  function prevTrack() {
+    if (ytPlayer && ytPlayer.getCurrentTime() > 3) { ytPlayer.seekTo(0); return; }
+    loadTrack(currentTrack - 1); doPlay();
+  }
+
+  function onPlayerState(e) {
+    if (e.data === YT.PlayerState.PLAYING) {
+      setPlayingUI(true);
+      if (globe) globe.resume();
+      startProgress();
+    } else if (e.data === YT.PlayerState.PAUSED) {
+      setPlayingUI(false);
+      if (globe) globe.pause();
+      stopProgress();
+    } else if (e.data === YT.PlayerState.ENDED) {
+      nextTrack();
+    }
+  }
+
+  function initPlayer() {
+    ytPlayer = new YT.Player('yt-hidden-player', {
+      height: '0', width: '0',
+      playerVars: { autoplay: 0, controls: 0, modestbranding: 1, rel: 0 },
+      events: { onReady: () => { ytReady = true; fetchPlaylist(); }, onStateChange: onPlayerState }
+    });
+  }
 
   playBtn.addEventListener('click', () => {
-    if (audio.paused) { if (audio.src) play(); }
-    else pause();
+    if (!playlist.length) { fetchPlaylist(); return; }
+    if (isPlaying) pause();
+    else doPlay();
   });
-  prevBtn.addEventListener('click', () => {
-    if (audio.currentTime > 2) audio.currentTime = 0;
-    else loadTrack((currentTrack - 1 + tracks.length) % tracks.length);
-    play();
-  });
-  nextBtn.addEventListener('click', () => {
-    loadTrack((currentTrack + 1) % tracks.length);
-    play();
-  });
-  audio.addEventListener('timeupdate', () => {
-    if (audio.duration) progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
-  });
+  prevBtn.addEventListener('click', prevTrack);
+  nextBtn.addEventListener('click', nextTrack);
   progressBar.addEventListener('click', (e) => {
+    if (!ytPlayer || !ytReady) return;
     const rect = progressBar.getBoundingClientRect();
-    audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+    const pct = (e.clientX - rect.left) / rect.width;
+    ytPlayer.seekTo(pct * ytPlayer.getDuration());
   });
-  audio.addEventListener('ended', () => {
-    loadTrack((currentTrack + 1) % tracks.length);
-    play();
-  });
+
+  if (typeof YT !== 'undefined' && YT.Player) {
+    initPlayer();
+  } else {
+    window.onYouTubeIframeAPIReady = initPlayer;
+  }
+
+  playlistTimer = setInterval(fetchPlaylist, 3600000);
   globe = initGlobe();
 }
 
