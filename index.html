@@ -16,12 +16,25 @@
       <video class="bg-video" src="background.mp4" muted playsinline preload="auto"></video>
       <video class="bg-video" src="background.mp4" muted playsinline preload="auto"></video>
     </div>
-    <div id="overlay">
-      <h1>VIBE</h1>
-      <p>Welcome to the experience</p>
+
+    <div id="vibe-title">VIBE</div>
+
+    <div id="music-panel">
+      <button id="prev-btn" class="ctrl-btn">⏮</button>
+      <div id="globe-wrap">
+        <div id="globe-container"></div>
+      </div>
+      <button id="next-btn" class="ctrl-btn">⏭</button>
+      <div id="track-info">
+        <span id="track-name">VOCE NA MIRA</span>
+        <span id="track-artist">Hwungii, DJ VGK1</span>
+      </div>
+      <button id="play-btn" class="ctrl-btn">▶</button>
+      <div id="progress-bar"><div id="progress-fill"></div></div>
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

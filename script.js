@@ -7,6 +7,7 @@ function startExperience() {
   loadingScreen.classList.add('hidden');
   mainContent.classList.add('visible');
   startBackgroundLoop();
+  initMusicPlayer();
 }
 
 loadingVideo.addEventListener('ended', startExperience);
@@ -49,4 +50,129 @@ function startBackgroundLoop() {
       }
     });
   });
+}
+
+function initMusicPlayer() {
+  const audio = new Audio('music.mp3');
+  audio.preload = 'auto';
+
+  const playBtn = document.getElementById('play-btn');
+  const prevBtn = document.getElementById('prev-btn');
+  const nextBtn = document.getElementById('next-btn');
+  const progressFill = document.getElementById('progress-fill');
+  const progressBar = document.getElementById('progress-bar');
+
+  let globe;
+
+  function play() {
+    audio.play();
+    playBtn.textContent = '⏸';
+    if (globe) globe.resume();
+  }
+
+  function pause() {
+    audio.pause();
+    playBtn.textContent = '▶';
+    if (globe) globe.pause();
+  }
+
+  playBtn.addEventListener('click', () => {
+    if (audio.paused) {
+      play();
+    } else {
+      pause();
+    }
+  });
+
+  prevBtn.addEventListener('click', () => {
+    audio.currentTime = 0;
+    if (!audio.paused) play();
+  });
+
+  nextBtn.addEventListener('click', () => {
+    audio.currentTime = 0;
+    if (!audio.paused) play();
+  });
+
+  audio.addEventListener('timeupdate', () => {
+    if (audio.duration) {
+      progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+    }
+  });
+
+  progressBar.addEventListener('click', (e) => {
+    const rect = progressBar.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    audio.currentTime = pct * audio.duration;
+  });
+
+  audio.addEventListener('ended', () => {
+    playBtn.textContent = '▶';
+    if (globe) globe.pause();
+  });
+
+  globe = initGlobe();
+}
+
+function initGlobe() {
+  const container = document.getElementById('globe-container');
+  if (!container) return;
+
+  const w = container.clientWidth || 50;
+  const h = container.clientHeight || 50;
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+  camera.position.z = 2.2;
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  container.appendChild(renderer.domElement);
+
+  const loader = new THREE.TextureLoader();
+
+  const earthMat = new THREE.MeshStandardMaterial({
+    map: loader.load('https://raw.githubusercontent.com/turban/webgl-earth/master/images/2_no_clouds_4k.jpg'),
+    bumpMap: loader.load('https://raw.githubusercontent.com/turban/webgl-earth/master/images/elev_bump_4k.jpg'),
+    bumpScale: 0.02,
+    roughness: 0.8,
+    metalness: 0.1
+  });
+  const earth = new THREE.Mesh(new THREE.SphereGeometry(0.6, 32, 32), earthMat);
+  scene.add(earth);
+
+  const cloudMat = new THREE.MeshStandardMaterial({
+    map: loader.load('https://raw.githubusercontent.com/turban/webgl-earth/master/images/fair_clouds_4k.png'),
+    transparent: true,
+    opacity: 0.3
+  });
+  const clouds = new THREE.Mesh(new THREE.SphereGeometry(0.605, 32, 32), cloudMat);
+  scene.add(clouds);
+
+  const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  sunLight.position.set(5, 3, 5);
+  scene.add(sunLight);
+
+  const ambientLight = new THREE.AmbientLight(0x333333);
+  scene.add(ambientLight);
+
+  let playing = false;
+  let animId;
+
+  function animate() {
+    animId = requestAnimationFrame(animate);
+    if (playing) {
+      earth.rotation.y += 0.02;
+      clouds.rotation.y += 0.025;
+    }
+    renderer.render(scene, camera);
+  }
+
+  animate();
+
+  return {
+    resume() { playing = true; },
+    pause() { playing = false; }
+  };
 }
