@@ -35,15 +35,19 @@ function initNeurons() {
   resize();
   addEventListener('resize', resize);
 
-  const COUNT = 120;
-  const CONN_DIST = 0.08;
+  const COUNT = 80;
+  const CONN_DIST = 0.12;
   const neurons = Array.from({ length: COUNT }, () => ({
     x: Math.random(), y: Math.random(),
-    vx: (Math.random() - 0.5) * 0.0008,
-    vy: (Math.random() - 0.5) * 0.0008
+    vx: (Math.random() - 0.5) * 0.0004,
+    vy: (Math.random() - 0.5) * 0.0004,
+    phase: Math.random() * Math.PI * 2,
+    size: 2 + Math.random() * 3,
+    isGold: Math.random() > 0.5
   }));
 
-  requestAnimationFrame(function frame() {
+  requestAnimationFrame(function frame(t) {
+    t /= 1000;
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, w, h);
@@ -54,9 +58,16 @@ function initNeurons() {
       if (n.x < 0 || n.x > 1) n.vx *= -1;
       if (n.y < 0 || n.y > 1) n.vy *= -1;
       const px = n.x * w, py = n.y * h;
+      const pulse = 1 + Math.sin(t * 2 + n.phase) * 0.15;
+      const r = n.size * pulse;
+      const color = n.isGold ? '255,215,0' : '255,255,255';
       ctx.beginPath();
-      ctx.arc(px, py, 1.5, 0, Math.PI * 2);
-      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.7)' : 'rgba(255,215,0,0.7)';
+      ctx.arc(px, py, r * 1.8, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${color},0.08)`;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(px, py, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${color},0.9)`;
       ctx.fill();
     });
 
@@ -69,8 +80,8 @@ function initNeurons() {
           ctx.beginPath();
           ctx.moveTo(neurons[i].x * w, neurons[i].y * h);
           ctx.lineTo(neurons[j].x * w, neurons[j].y * h);
-          ctx.strokeStyle = `rgba(255,215,0,${(1 - dist / CONN_DIST) * 0.15})`;
-          ctx.lineWidth = 0.5;
+          ctx.strokeStyle = `rgba(255,215,0,${(1 - dist / CONN_DIST) * 0.25})`;
+          ctx.lineWidth = 0.8;
           ctx.stroke();
         }
       }
