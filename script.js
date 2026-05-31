@@ -151,6 +151,7 @@ function initMusicPlayer() {
   function nextTrack() {
     if (!playlist.length) return;
     loadTrack(currentTrack + 1);
+    if (ytPlayer) ytPlayer.playVideo();
     setUI(true);
     if (globe) globe.resume();
   }
@@ -158,13 +159,14 @@ function initMusicPlayer() {
     if (!playlist.length) return;
     if (ytPlayer && ytPlayer.getCurrentTime() > 3) { ytPlayer.seekTo(0); return; }
     loadTrack(currentTrack - 1);
+    if (ytPlayer) ytPlayer.playVideo();
     setUI(true);
     if (globe) globe.resume();
   }
 
   function onPlayerState(e) {
     const s = e.data;
-    if (s === 1) {
+    if (s === YT.PlayerState.PLAYING) {
       setUI(true);
       if (globe) globe.resume();
       if (progressInterval) { clearInterval(progressInterval); }
@@ -174,11 +176,11 @@ function initMusicPlayer() {
         const cur = ytPlayer.getCurrentTime();
         if (dur) progressFill.style.width = (cur / dur * 100) + '%';
       }, 500);
-    } else if (s === 2) {
+    } else if (s === YT.PlayerState.PAUSED) {
       setUI(false);
       if (globe) globe.pause();
       if (progressInterval) { clearInterval(progressInterval); progressInterval = null; }
-    } else if (s === 0) {
+    } else if (s === YT.PlayerState.ENDED) {
       if (playlist.length) nextTrack();
     }
   }
