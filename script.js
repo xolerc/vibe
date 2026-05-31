@@ -261,7 +261,7 @@ function initMusicPlayer() {
 
   function initPlayer() {
     try {
-      ytPlayer = new YT.Player('yt-hidden-player', {
+      ytPlayer = new YT.Player('yt-player-box', {
         height: '1', width: '1',
         playerVars: { autoplay: 0, controls: 0, modestbranding: 1, rel: 0 },
         events: {
