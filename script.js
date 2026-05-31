@@ -28,52 +28,76 @@ function initMusicPlayer() {
   const trackArtist = document.getElementById('track-artist');
   const playIcon = document.getElementById('play-icon');
   const pauseIcon = document.getElementById('pause-icon');
-  const videoWrap = document.getElementById('yt-video-wrap');
-  const panel = document.getElementById('music-panel');
-  const modeVideo = document.getElementById('mode-video');
-  const modeMusic = document.getElementById('mode-music');
-  let globe;
 
-  const V_PATH = 'https://xolerc.github.io/me/videos';
-  const videoTracks = [
-    { video: V_PATH + '/2_5287781263149656497.mp4', name: 'Video 1', artist: '' },
-    { video: V_PATH + '/2_5373350012551988338.mp4', name: 'Video 2', artist: '' },
-    { video: V_PATH + '/2_5211184992486459614.mp4', name: 'Video 3', artist: '' },
-    { video: V_PATH + '/2_5282749129141818157.mp4', name: 'Video 4', artist: '' },
-    { video: V_PATH + '/2_5447322629427989855.mp4', name: 'Video 5', artist: '' },
-    { video: V_PATH + '/2_5452074624193953955.mp4', name: 'Video 6', artist: '' },
-    { video: V_PATH + '/2_5462948497839910298.mp4', name: 'Video 7', artist: '' },
-    { video: V_PATH + '/2_5237973231792597901.mp4', name: 'Video 8', artist: '' },
-    { video: V_PATH + '/2_5458751034891467046.mp4', name: 'Video 9', artist: '' },
-    { video: V_PATH + '/2_5235775282278869717.mp4', name: 'Video 10', artist: '' },
-    { video: V_PATH + '/2_5458751034891467056.mp4', name: 'Video 11', artist: '' },
-    { video: V_PATH + '/2_5458622658318987050.mp4', name: 'Video 12', artist: '' },
-    { video: 'https://xolerc.github.io/vibe/video13.mp4', name: 'Video 13', artist: '' }
-  ];
   const musicTracks = [
     { file: 'track0.mp3', name: 'VOCE NA MIRA', artist: 'Hwungii, DJ VGK1' },
     { file: 'track1.mp3', name: 'NO ERA AMOR', artist: 'DJ Asul' },
     { file: 'track2.mp3', name: 'AURA', artist: 'Ogryzek' }
   ];
 
-  let mode = 'music';
   let currentTrack = 0;
   const audio = new Audio();
   audio.preload = 'auto';
   let isPlaying = false;
-
-  const mv = document.createElement('video');
-  mv.playsInline = true;
-  mv.preload = 'auto';
-  mv.style.cssText = 'width:100%;height:100%;display:block;object-fit:contain;background:#000';
-  videoWrap.innerHTML = '';
-  videoWrap.appendChild(mv);
 
   function setUI(on) {
     playIcon.style.display = on ? 'none' : '';
     pauseIcon.style.display = on ? '' : 'none';
     isPlaying = on;
   }
+
+  function loadTrack(index) {
+    const t = musicTracks[index];
+    currentTrack = ((index % musicTracks.length) + musicTracks.length) % musicTracks.length;
+    trackName.textContent = t.name;
+    trackArtist.textContent = t.artist;
+    progressFill.style.width = '0%';
+    audio.src = t.file;
+  }
+
+  function doPlay() {
+    if (!audio.src) loadTrack(currentTrack);
+    audio.play().then(() => {
+      setUI(true);
+      if (globe) globe.resume();
+    }).catch(() => {});
+  }
+
+  function pause() {
+    audio.pause();
+    setUI(false);
+    if (globe) globe.pause();
+  }
+
+  audio.addEventListener('timeupdate', () => {
+    if (audio.duration) progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  });
+  audio.addEventListener('ended', () => {
+    loadTrack(currentTrack + 1);
+    doPlay();
+  });
+
+  playBtn.addEventListener('click', () => {
+    if (audio.paused) doPlay();
+    else pause();
+  });
+  prevBtn.addEventListener('click', () => {
+    if (audio.currentTime > 2) audio.currentTime = 0;
+    else loadTrack(currentTrack - 1);
+    doPlay();
+  });
+  nextBtn.addEventListener('click', () => {
+    loadTrack(currentTrack + 1);
+    doPlay();
+  });
+  progressBar.addEventListener('click', (e) => {
+    const rect = progressBar.getBoundingClientRect();
+    audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+  });
+
+  loadTrack(0);
+  var globe = initGlobe();
+}
 
   function getTracks() { return mode === 'video' ? videoTracks : musicTracks; }
   function getPlaySrc() { return mode === 'video' ? mv : audio; }
