@@ -1,11 +1,11 @@
 const loadingScreen = document.getElementById('loading-screen');
-const mainContent = document.getElementById('main-content');
+const pageHome = document.getElementById('page-home');
 const loadingVideo = document.getElementById('loading-video');
 const bgVideos = document.querySelectorAll('.bg-video');
 
 function startExperience() {
   loadingScreen.classList.add('hidden');
-  mainContent.classList.add('visible');
+  pageHome.classList.add('visible');
   startBackgroundLoop();
   initMusicPlayer();
 }
@@ -212,10 +212,9 @@ function initGlobe() {
   scene.add(ambientLight);
 
   let playing = false;
-  let animId;
 
   function animate() {
-    animId = requestAnimationFrame(animate);
+    requestAnimationFrame(animate);
     if (playing) {
       earth.rotation.y += 0.02;
       clouds.rotation.y += 0.025;
@@ -245,7 +244,7 @@ function getUserId() {
 }
 
 const myId = getUserId();
-let isAdmin = (myId === 'xoleric2003');
+const isAdmin = (myId === 'xoleric2003');
 let socket = null;
 
 function connectSocket() {
@@ -253,7 +252,7 @@ function connectSocket() {
 
   socket.on('connect', () => {
     socket.emit('register', { userId: myId });
-    setChatStatus('connected');
+    setChatStatus('online');
     if (isAdmin) initAdmin();
   });
 
@@ -282,7 +281,7 @@ function connectSocket() {
 
 function setChatStatus(s) {
   const el = document.getElementById('chat-status');
-  if (el) el.textContent = s === 'connected' ? 'online' : s;
+  if (el) el.textContent = s;
 }
 
 function formatTime(ts) {
@@ -299,17 +298,8 @@ function addChatMessage(text, type, ts) {
 }
 
 function initChat() {
-  const chatBtn = document.getElementById('chat-btn');
-  const overlay = document.getElementById('chat-overlay');
-  const closeBtn = document.getElementById('chat-close');
   const input = document.getElementById('chat-input');
   const sendBtn = document.getElementById('chat-send');
-
-  chatBtn.addEventListener('click', () => overlay.classList.add('open'));
-  closeBtn.addEventListener('click', () => overlay.classList.remove('open'));
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) overlay.classList.remove('open');
-  });
 
   function sendMsg() {
     const text = input.value.trim();
@@ -349,11 +339,8 @@ function activateAdmin() {
 }
 
 function initAdmin() {
-  document.getElementById('admin-panel').style.display = 'flex';
+  document.getElementById('page-admin').classList.add('open');
 
-  const chatBtn = document.getElementById('chat-btn');
-  const adminPanel = document.getElementById('admin-panel');
-  const closeBtn = document.getElementById('admin-close');
   const userList = document.getElementById('admin-user-list');
   const adminMessages = document.getElementById('admin-messages');
   const adminInput = document.getElementById('admin-input');
@@ -362,27 +349,19 @@ function initAdmin() {
 
   let selectedUser = null;
 
-  chatBtn.addEventListener('click', () => {
-    adminPanel.style.display = adminPanel.style.display === 'none' ? 'flex' : 'none';
-  });
-
-  closeBtn.addEventListener('click', () => {
-    adminPanel.style.display = 'none';
-  });
-
   window.renderUserList = function(users) {
     userList.innerHTML = '';
     users.forEach(u => {
       if (u.id === 'xoleric2003') return;
       const div = document.createElement('div');
       div.className = 'admin-user';
-      div.innerHTML = '<span class="user-dot"></span>' + u.id.slice(0, 16) + '...';
+      div.innerHTML = '<span class="user-dot"></span>' + u.id.slice(0, 12) + '...';
       div.addEventListener('click', () => {
         selectedUser = u.id;
         document.querySelectorAll('.admin-user').forEach(el => el.classList.remove('active'));
         div.classList.add('active');
         replyTo.style.display = 'block';
-        replyTo.textContent = 'Reply to: ' + u.id.slice(0, 16) + '...';
+        replyTo.textContent = 'To: ' + u.id.slice(0, 12) + '...';
       });
       userList.appendChild(div);
     });
@@ -391,7 +370,7 @@ function initAdmin() {
   window.addAdminMessage = function(senderId, text, ts) {
     const div = document.createElement('div');
     div.className = 'admin-msg';
-    div.innerHTML = '<strong>' + senderId.slice(0, 16) + '...</strong> ' + text +
+    div.innerHTML = '<strong>' + senderId.slice(0, 12) + '...</strong> ' + text +
       '<span class="time">' + formatTime(ts) + '</span>';
     adminMessages.appendChild(div);
     div.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -399,7 +378,7 @@ function initAdmin() {
 
   window.highlightUser = function(senderId) {
     document.querySelectorAll('.admin-user').forEach(el => {
-      if (el.textContent.includes(senderId.slice(0, 16))) {
+      if (el.textContent.includes(senderId.slice(0, 12))) {
         el.style.borderLeft = '2px solid #4488cc';
       }
     });
@@ -417,6 +396,25 @@ function initAdmin() {
   adminInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') sendAdminMsg();
   });
+
+  const navChat = document.getElementById('nav-chat');
+  if (navChat) navChat.textContent = 'Admin';
 }
+
+const navHome = document.getElementById('nav-home');
+const navChat = document.getElementById('nav-chat');
+const pageChat = document.getElementById('page-chat');
+const pageAdmin = document.getElementById('page-admin');
+
+function switchPage(page) {
+  navHome.classList.toggle('active', page === 'home');
+  navChat.classList.toggle('active', page === 'chat');
+
+  pageChat.classList.toggle('open', page === 'chat' && !isAdmin);
+  pageAdmin.classList.toggle('open', page === 'chat' && isAdmin);
+}
+
+navHome.addEventListener('click', () => switchPage('home'));
+navChat.addEventListener('click', () => switchPage('chat'));
 
 initChat();
