@@ -34,14 +34,41 @@ html, body {
 
 #home-logo {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  font-size: 2.8rem; font-weight: 800; letter-spacing: 0.15em;
-  color: rgba(255,255,255,0.15); text-align: center;
+  display: flex; align-items: center; gap: 12px;
   pointer-events: none; user-select: none; z-index: 5;
-  font-family: system-ui, -apple-system, sans-serif;
-  text-shadow: 0 0 30px rgba(255,255,255,0.05);
 }
+.logo-text-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.logo-main {
+  font-size: 3.2rem; font-weight: 900; letter-spacing: 0.12em;
+  background: linear-gradient(135deg, rgba(170,187,255,0.6), rgba(102,204,255,0.7), rgba(170,136,255,0.6));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 25px rgba(102,204,255,0.15));
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1;
+}
+.logo-sub {
+  font-size: 0.55rem; letter-spacing: 0.4em; font-weight: 300;
+  color: rgba(170,187,255,0.25);
+  text-transform: uppercase; margin-top: 2px;
+}
+.logo-line {
+  display: block; width: 60%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(170,187,255,0.2), transparent);
+}
+.logo-line-top { margin-bottom: 4px; }
+.logo-line-bot { margin-top: 4px; }
+.logo-deco { flex-shrink: 0; opacity: 0.4; }
+.logo-deco-left { margin-right: -4px; }
+.logo-deco-right { margin-left: -4px; }
+
 @media (max-width: 480px) {
-  #home-logo { font-size: 1.8rem; }
+  #home-logo { gap: 6px; }
+  .logo-main { font-size: 2rem; letter-spacing: 0.1em; }
+  .logo-sub { font-size: 0.45rem; letter-spacing: 0.3em; }
+  .logo-deco { width: 20px; height: 40px; }
 }
 
 #bg-video-container {
