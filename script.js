@@ -28,18 +28,46 @@ function initMusicPlayer() {
   const trackArtist = document.getElementById('track-artist');
   const playIcon = document.getElementById('play-icon');
   const pauseIcon = document.getElementById('pause-icon');
+  const videoWrap = document.getElementById('yt-video-wrap');
+  const panel = document.getElementById('music-panel');
+  const modeVideo = document.getElementById('mode-video');
+  const modeMusic = document.getElementById('mode-music');
+  let globe;
 
+  const V_PATH = 'https://xolerc.github.io/me/videos';
+  const videoTracks = [
+    { file: V_PATH + '/2_5287781263149656497.mp4', name: 'Video 1' },
+    { file: V_PATH + '/2_5373350012551988338.mp4', name: 'Video 2' },
+    { file: V_PATH + '/2_5211184992486459614.mp4', name: 'Video 3' },
+    { file: V_PATH + '/2_5282749129141818157.mp4', name: 'Video 4' },
+    { file: V_PATH + '/2_5447322629427989855.mp4', name: 'Video 5' },
+    { file: V_PATH + '/2_5452074624193953955.mp4', name: 'Video 6' },
+    { file: V_PATH + '/2_5462948497839910298.mp4', name: 'Video 7' },
+    { file: V_PATH + '/2_5237973231792597901.mp4', name: 'Video 8' },
+    { file: V_PATH + '/2_5458751034891467046.mp4', name: 'Video 9' },
+    { file: V_PATH + '/2_5235775282278869717.mp4', name: 'Video 10' },
+    { file: V_PATH + '/2_5458751034891467056.mp4', name: 'Video 11' },
+    { file: V_PATH + '/2_5458622658318987050.mp4', name: 'Video 12' },
+    { file: V_PATH + '/2_5211184992486459614.mp4', name: 'Video 13' }
+  ];
   const musicTracks = [
     { file: 'track0.mp3', name: 'VOCE NA MIRA', artist: 'Hwungii, DJ VGK1' },
     { file: 'track1.mp3', name: 'NO ERA AMOR', artist: 'DJ Asul' },
     { file: 'track2.mp3', name: 'AURA', artist: 'Ogryzek' }
   ];
 
+  let mode = 'music';
   let currentTrack = 0;
   const audio = new Audio();
   audio.preload = 'auto';
   let isPlaying = false;
-  let globe;
+
+  const mv = document.createElement('video');
+  mv.playsInline = true;
+  mv.preload = 'auto';
+  mv.style.cssText = 'width:100%;height:100%;display:block;object-fit:contain;background:#000';
+  videoWrap.innerHTML = '';
+  videoWrap.appendChild(mv);
 
   function setUI(on) {
     playIcon.style.display = on ? 'none' : '';
@@ -48,23 +76,38 @@ function initMusicPlayer() {
   }
 
   function loadTrack(index) {
-    currentTrack = ((index % musicTracks.length) + musicTracks.length) % musicTracks.length;
-    const t = musicTracks[currentTrack];
+    const tracks = mode === 'video' ? videoTracks : musicTracks;
+    currentTrack = ((index % tracks.length) + tracks.length) % tracks.length;
+    const t = tracks[currentTrack];
     trackName.textContent = t.name;
-    trackArtist.textContent = t.artist;
+    trackArtist.textContent = t.artist || '';
     progressFill.style.width = '0%';
-    audio.src = t.file;
+
+    if (mode === 'video') {
+      mv.src = t.file;
+      mv.currentTime = 0;
+      mv.load();
+      audio.pause();
+      audio.removeAttribute('src');
+    } else {
+      audio.src = t.file;
+      mv.pause();
+      mv.removeAttribute('src');
+    }
   }
 
   function doPlay() {
-    if (!audio.src) loadTrack(currentTrack);
-    audio.play().then(() => {
+    const src = mode === 'video' ? mv : audio;
+    src.play().then(() => {
       setUI(true);
       if (globe) globe.resume();
-    }).catch(() => {});
+    }).catch(() => {
+      if (mode === 'video') mv.addEventListener('canplay', () => mv.play().catch(() => {}), { once: true });
+    });
   }
 
   function pause() {
+    mv.pause();
     audio.pause();
     setUI(false);
     if (globe) globe.pause();
@@ -77,13 +120,22 @@ function initMusicPlayer() {
     loadTrack(currentTrack + 1);
     doPlay();
   });
+  mv.addEventListener('timeupdate', () => {
+    if (mv.duration) progressFill.style.width = (mv.currentTime / mv.duration * 100) + '%';
+  });
+  mv.addEventListener('ended', () => {
+    loadTrack(currentTrack + 1);
+    doPlay();
+  });
 
   playBtn.addEventListener('click', () => {
-    if (audio.paused) doPlay();
+    const src = mode === 'video' ? mv : audio;
+    if (src.paused) doPlay();
     else pause();
   });
   prevBtn.addEventListener('click', () => {
-    if (audio.currentTime > 2) audio.currentTime = 0;
+    const src = mode === 'video' ? mv : audio;
+    if (src.currentTime > 2) src.currentTime = 0;
     else loadTrack(currentTrack - 1);
     doPlay();
   });
@@ -93,10 +145,25 @@ function initMusicPlayer() {
   });
   progressBar.addEventListener('click', (e) => {
     const rect = progressBar.getBoundingClientRect();
-    audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+    const pct = (e.clientX - rect.left) / rect.width;
+    const src = mode === 'video' ? mv : audio;
+    src.currentTime = pct * src.duration;
   });
 
-  loadTrack(0);
+  function setMode(m) {
+    mode = m;
+    panel.classList.remove('mode-video', 'mode-music');
+    panel.classList.add('mode-' + m);
+    modeVideo.classList.toggle('active', m === 'video');
+    modeMusic.classList.toggle('active', m === 'music');
+    pause();
+    currentTrack = 0;
+    loadTrack(0);
+  }
+
+  modeVideo.addEventListener('click', () => setMode('video'));
+  modeMusic.addEventListener('click', () => setMode('music'));
+  setMode('music');
   globe = initGlobe();
 }
 
