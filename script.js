@@ -703,7 +703,6 @@ function startChatAnim() {
 }
 
 /* ─── Regular Chat ─── */
-let sharedMedia = [];
 
 function initChat() {
   const container = document.getElementById('chat-messages');
@@ -733,56 +732,11 @@ function initChat() {
     if (!emojiPick.contains(e.target) && e.target !== emojiBtn) emojiPick.classList.remove('open');
   });
 
-  /* ─── Gallery ─── */
-  const gallery = document.getElementById('media-gallery');
-  const galleryGrid = document.getElementById('media-gallery-grid');
-  const galleryClose = document.getElementById('media-gallery-close');
-  const galleryAdd = document.getElementById('media-gallery-add-btn');
-
-  function renderGallery() {
-    galleryGrid.innerHTML = '';
-    const addDiv = document.createElement('div');
-    addDiv.className = 'media-item add-media';
-    addDiv.textContent = '+';
-    addDiv.addEventListener('click', () => fileInput.click());
-    galleryGrid.appendChild(addDiv);
-    sharedMedia.forEach((m, idx) => {
-      const d = document.createElement('div');
-      d.className = 'media-item';
-      if (m.isImage) {
-        const img = document.createElement('img');
-        img.src = m.data;
-        d.appendChild(img);
-      } else {
-        const icon = document.createElement('span');
-        icon.className = 'media-icon';
-        icon.textContent = m.isAudio ? '🎵' : '🎬';
-        d.appendChild(icon);
-        const badge = document.createElement('span');
-        badge.className = 'media-type-badge';
-        badge.textContent = m.isAudio ? 'MP3' : 'VIDEO';
-        d.appendChild(badge);
-      }
-      d.addEventListener('click', () => {
-        gallery.classList.remove('open');
-        const msg = { text: m.data, type: 'own', time: Date.now(), isImage: m.isImage, isFile: !m.isImage, fileName: m.fileName };
-        appendMsg(container, msg);
-        fbSend({ senderId: isAdmin ? 'admin' : myId, text: m.data, time: msg.time, isImage: m.isImage, isFile: !m.isImage, fileName: msg.fileName });
-      });
-      galleryGrid.appendChild(d);
-    });
-  }
-
+  /* ─── File attach ─── */
   attachBtn.addEventListener('click', () => {
     emojiPick.classList.remove('open');
-    gallery.classList.toggle('open');
-    if (gallery.classList.contains('open')) renderGallery();
+    fileInput.click();
   });
-  galleryClose.addEventListener('click', () => gallery.classList.remove('open'));
-  document.addEventListener('click', e => {
-    if (!gallery.contains(e.target) && !attachBtn.contains(e.target)) gallery.classList.remove('open');
-  });
-  galleryAdd.addEventListener('click', () => fileInput.click());
 
   fileInput.addEventListener('change', e => {
     const f = e.target.files[0];
@@ -792,8 +746,6 @@ function initChat() {
       const isImg = f.type.startsWith('image/');
       const isAudio = f.type.startsWith('audio/');
       const dataUri = ev.target.result;
-      sharedMedia.push({ data: dataUri, isImage: isImg, isAudio: isAudio, fileName: isImg ? null : f.name });
-      renderGallery();
       const msg = { text: dataUri, type: 'own', time: Date.now(), isImage: isImg, isFile: !isImg, fileName: isImg ? null : f.name };
       appendMsg(container, msg);
       fbSend({ senderId: isAdmin ? 'admin' : myId, text: dataUri, time: msg.time, isImage: isImg, isFile: !isImg, fileName: msg.fileName });
@@ -985,9 +937,7 @@ function initAdmin() {
     const r = new FileReader();
     r.onload = ev => {
       const isImg = f.type.startsWith('image/');
-      const isAudio = f.type.startsWith('audio/');
       const dataUri = ev.target.result;
-      sharedMedia.push({ data: dataUri, isImage: isImg, isAudio: isAudio, fileName: isImg ? null : f.name });
       const admData = loadJSON('vibe_admin_data', {});
       if (!admData[selectedAdmUser]) admData[selectedAdmUser] = { messages: [], unread: 0 };
       admData[selectedAdmUser].messages.push({
@@ -1036,8 +986,6 @@ function hideAllPages() {
   pageChat.classList.remove('open');
   pageAdmin.classList.remove('open');
   document.getElementById('emoji-picker').classList.remove('open');
-  const g = document.getElementById('media-gallery');
-  if (g) g.classList.remove('open');
 }
 function deactivateAllNav() {
   navHome.classList.remove('active');
