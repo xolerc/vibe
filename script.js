@@ -39,6 +39,7 @@ function initMusicPlayer() {
   const audio = new Audio();
   audio.preload = 'auto';
   let isPlaying = false;
+  let globe;
 
   function setUI(on) {
     playIcon.style.display = on ? 'none' : '';
@@ -47,8 +48,8 @@ function initMusicPlayer() {
   }
 
   function loadTrack(index) {
-    const t = musicTracks[index];
     currentTrack = ((index % musicTracks.length) + musicTracks.length) % musicTracks.length;
+    const t = musicTracks[currentTrack];
     trackName.textContent = t.name;
     trackArtist.textContent = t.artist;
     progressFill.style.width = '0%';
@@ -96,7 +97,7 @@ function initMusicPlayer() {
   });
 
   loadTrack(0);
-  var globe = initGlobe();
+  globe = initGlobe();
 }
 
   function getTracks() { return mode === 'video' ? videoTracks : musicTracks; }
