@@ -53,7 +53,14 @@ function startBackgroundLoop() {
 }
 
 function initMusicPlayer() {
-  const audio = new Audio('music.mp3');
+  const tracks = [
+    { file: 'track0.mp3', name: 'VOCE NA MIRA', artist: 'Hwungii, DJ VGK1' },
+    { file: 'track1.mp3', name: 'NO ERA AMOR', artist: 'DJ Asul' },
+    { file: 'track2.mp3', name: 'AURA', artist: 'Ogryzek' }
+  ];
+  let currentTrack = 0;
+
+  const audio = new Audio();
   audio.preload = 'auto';
 
   const playBtn = document.getElementById('play-btn');
@@ -61,8 +68,19 @@ function initMusicPlayer() {
   const nextBtn = document.getElementById('next-btn');
   const progressFill = document.getElementById('progress-fill');
   const progressBar = document.getElementById('progress-bar');
+  const trackName = document.getElementById('track-name');
+  const trackArtist = document.getElementById('track-artist');
 
   let globe;
+
+  function loadTrack(index) {
+    const t = tracks[index];
+    audio.src = t.file;
+    trackName.textContent = t.name;
+    trackArtist.textContent = t.artist;
+    progressFill.style.width = '0%';
+    currentTrack = index;
+  }
 
   function play() {
     audio.play();
@@ -76,21 +94,29 @@ function initMusicPlayer() {
     if (globe) globe.pause();
   }
 
+  loadTrack(0);
+
   playBtn.addEventListener('click', () => {
     if (audio.paused) {
-      play();
+      if (audio.src) play();
     } else {
       pause();
     }
   });
 
   prevBtn.addEventListener('click', () => {
-    audio.currentTime = 0;
-    if (!audio.paused) play();
+    if (audio.currentTime > 2) {
+      audio.currentTime = 0;
+    } else {
+      const prev = (currentTrack - 1 + tracks.length) % tracks.length;
+      loadTrack(prev);
+      if (!audio.paused) play();
+    }
   });
 
   nextBtn.addEventListener('click', () => {
-    audio.currentTime = 0;
+    const next = (currentTrack + 1) % tracks.length;
+    loadTrack(next);
     if (!audio.paused) play();
   });
 

@@ -92,7 +92,7 @@ html, body {
   position: absolute;
   top: 20px;
   right: 30px;
-  background: rgba(40, 40, 40, 0.18);
+  background: rgba(40, 40, 40, 0.05);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: 50px;
