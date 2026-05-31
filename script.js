@@ -285,11 +285,23 @@ function makeBubble(text, type, ts, opts) {
     img.addEventListener('click', () => openModal(text));
     div.appendChild(img);
   } else if (opts.isFile) {
-    const a = document.createElement('a');
-    a.href = text; a.target = '_blank';
-    a.textContent = opts.fileName || '📎 File';
-    a.style.color = '#8ab'; a.style.textDecoration = 'underline';
-    div.appendChild(a);
+    const isVideo = opts.fileName && /\.(mp4|webm|ogg|mov)$/i.test(opts.fileName);
+    if (isVideo) {
+      const v = document.createElement('video');
+      v.src = text; v.controls = true; v.playsInline = true; v.preload = 'metadata';
+      v.style.cssText = 'max-width:100%;max-height:240px;border-radius:8px;display:block;margin-bottom:4px';
+      div.appendChild(v);
+      const lbl = document.createElement('div');
+      lbl.textContent = opts.fileName;
+      lbl.style.cssText = 'font-size:0.65rem;color:#8ab;margin-bottom:2px';
+      div.insertBefore(lbl, v);
+    } else {
+      const a = document.createElement('a');
+      a.href = text; a.target = '_blank';
+      a.textContent = opts.fileName || '📎 File';
+      a.style.color = '#8ab'; a.style.textDecoration = 'underline';
+      div.appendChild(a);
+    }
   } else {
     const t = document.createElement('span');
     t.textContent = text;
