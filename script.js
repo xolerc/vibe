@@ -490,7 +490,7 @@ function startChatAnim() {
   const things = [thing(0), thing(1)];
   let lastPointer = 0;
 
-  canvas.addEventListener('pointermove', e => {
+  document.addEventListener('pointermove', e => {
     const cssW = window.innerWidth;
     const x = (e.clientX - cssW / 2) / cssW;
     const y = (e.clientY - window.innerHeight / 2) / cssW;
