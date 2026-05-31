@@ -89,11 +89,14 @@ function initMusicPlayer() {
   videoWrap.innerHTML = '';
   videoWrap.appendChild(mv);
 
-  function setVideo(track) {
-    if (track.video) {
-      mv.src = track.video;
-      mv.currentTime = 0;
-    }
+  function preloadVideo(url) {
+    if (!url) return;
+    const link = document.createElement('link');
+    link.rel = 'prefetch';
+    link.href = url;
+    link.as = 'video';
+    document.head.appendChild(link);
+    setTimeout(() => link.remove(), 5000);
   }
 
   function setUI(on) {
@@ -109,14 +112,35 @@ function initMusicPlayer() {
     trackArtist.textContent = t.artist;
     progressFill.style.width = '0%';
     audio.src = t.file;
-    setVideo(t);
+
+    if (t.video) {
+      mv.src = t.video;
+      mv.currentTime = 0;
+      mv.load();
+      mv.style.display = '';
+    } else {
+      mv.removeAttribute('src');
+      mv.load();
+      mv.style.display = 'none';
+    }
+
+    const nextT = tracks[(index + 1) % tracks.length];
+    preloadVideo(nextT.video);
+
+    if (isPlaying) {
+      audio.play().catch(() => {});
+    }
   }
 
   function doPlay() {
+    if (!audio.src) { loadTrack(currentTrack); return; }
     audio.play().then(() => {
       setUI(true);
-      if (tracks[currentTrack].video) mv.play().catch(() => {});
       if (globe) globe.resume();
+      if (tracks[currentTrack].video) {
+        const tryPlay = () => mv.play().catch(() => setTimeout(tryPlay, 300));
+        tryPlay();
+      }
     }).catch(() => {});
   }
 
@@ -128,19 +152,28 @@ function initMusicPlayer() {
   }
 
   audio.addEventListener('timeupdate', () => {
-    if (audio.duration) progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+    if (audio.duration) {
+      progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+      if (tracks[currentTrack].video && mv.duration && mv.readyState > 0) {
+        const diff = Math.abs(audio.currentTime - mv.currentTime);
+        if (diff > 0.5) mv.currentTime = audio.currentTime;
+      }
+    }
   });
   audio.addEventListener('ended', () => {
     loadTrack((currentTrack + 1) % tracks.length);
     doPlay();
   });
+  mv.addEventListener('canplay', () => {
+    if (isPlaying && mv.src) mv.play().catch(() => {});
+  });
 
   playBtn.addEventListener('click', () => {
-    if (audio.paused) { loadTrack(currentTrack); doPlay(); }
+    if (audio.paused) doPlay();
     else pause();
   });
   prevBtn.addEventListener('click', () => {
-    if (audio.currentTime > 2) audio.currentTime = 0;
+    if (audio.currentTime > 2) { audio.currentTime = 0; if (tracks[currentTrack].video) mv.currentTime = 0; }
     else loadTrack((currentTrack - 1 + tracks.length) % tracks.length);
     doPlay();
   });
@@ -150,7 +183,9 @@ function initMusicPlayer() {
   });
   progressBar.addEventListener('click', (e) => {
     const rect = progressBar.getBoundingClientRect();
-    audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+    const pct = (e.clientX - rect.left) / rect.width;
+    audio.currentTime = pct * audio.duration;
+    if (tracks[currentTrack].video && mv.duration) mv.currentTime = pct * mv.duration;
   });
 
   loadTrack(0);
