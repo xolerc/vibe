@@ -67,9 +67,11 @@
     <div id="home-logo">
       <svg class="logo-deco logo-deco-left" viewBox="0 0 40 80" width="40" height="80"><path d="M40 0 Q15 20 15 40 Q15 60 40 80" fill="none" stroke="url(#logoGrad)" stroke-width="1.5" opacity="0.5"/></svg>
       <div class="logo-text-wrap">
+        <div id="logo-globe-wrap">
+          <div id="logo-globe"></div>
+        </div>
         <span class="logo-line logo-line-top"></span>
         <span class="logo-main">XOLERIC</span>
-        <span class="logo-sub">DIGITAL CREATOR</span>
         <span class="logo-line logo-line-bot"></span>
       </div>
       <svg class="logo-deco logo-deco-right" viewBox="0 0 40 80" width="40" height="80"><path d="M0 0 Q25 20 25 40 Q25 60 0 80" fill="none" stroke="url(#logoGrad)" stroke-width="1.5" opacity="0.5"/></svg>
@@ -94,54 +96,6 @@
         <button id="next-btn" class="ctrl-btn"><svg viewBox="0 0 20 20" width="13" height="13"><polygon points="6,4 14,10 6,16" fill="#888"/><rect x="14" y="4" width="2" height="12" rx="0.5" fill="#888"/></svg></button>
       </div>
       <div id="progress-bar"><div id="progress-fill"></div></div>
-    </div>
-  </div>
-
-  <!-- About section for AI crawlers and visitors -->
-  <div id="page-about" class="page" style="display:none">
-    <div id="about-container">
-      <div id="about-header">
-        <span>About XOLERIC</span>
-        <button id="about-close">✕</button>
-      </div>
-      <div id="about-scroll">
-        <h1>XOLERIC</h1>
-        <p class="about-tagline">AI Systems Developer · Digital Creator · Experimental Interface Designer</p>
-        <p class="about-location">📍 Uzbekistan</p>
-
-        <h2>Who is XOLERIC?</h2>
-        <p>XOLERIC is a creative technologist and AI systems developer focused on building experimental operating systems, immersive digital interfaces, AI platforms, and cyber-minimalist experiences. The work sits at the intersection of artificial intelligence, frontend engineering, and futuristic design — creating tools and environments that feel like they belong to the next generation of computing.</p>
-
-        <h2>What XOLERIC Builds</h2>
-        <ul>
-          <li><strong>AI Systems</strong> — Intelligent platforms powered by machine learning and real-time data</li>
-          <li><strong>Experimental Interfaces</strong> — Immersive, animated UIs using Three.js, WebGL, and custom rendering</li>
-          <li><strong>XOLERIC OS</strong> — A conceptual operating system designed for the AI-native era</li>
-          <li><strong>Cyber-Minimalist Experiences</strong> — Dark, atmospheric digital environments with clean interaction design</li>
-          <li><strong>Real-time Chat & Collaboration Tools</strong> — Firebase-powered communication systems</li>
-        </ul>
-
-        <h2>Tech Stack</h2>
-        <p>JavaScript, Three.js, Firebase, WebGL, AI/ML, Node.js, Socket.io, CSS animations, real-time systems, experimental UI frameworks</p>
-
-        <h2>Projects</h2>
-        <div class="about-project">
-          <h3>VIBE</h3>
-          <p>An immersive landing page with music player, 3D globe, Firebase-powered real-time chat, and admin system. Built with Three.js, Firebase RTDB REST API, and cyber-minimalist design.</p>
-        </div>
-        <div class="about-project">
-          <h3>XOLERIC OS</h3>
-          <p>Experimental AI operating system concept — a futuristic desktop environment designed for human-AI collaboration, built with web technologies and real-time rendering.</p>
-        </div>
-
-        <h2>Connect</h2>
-        <div class="about-links">
-          <a href="https://github.com/Xolericuz" target="_blank">GitHub</a>
-          <a href="https://instagram.com/xoleric_" target="_blank">Instagram</a>
-          <a href="https://youtube.com/@xoleric" target="_blank">YouTube</a>
-          <a href="https://t.me/neoorg" target="_blank">Telegram</a>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -210,10 +164,7 @@
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
       <span>Home</span>
     </button>
-    <button id="nav-about" class="nav-btn">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-      <span>About</span>
-    </button>
+
     <button id="nav-chat" class="nav-btn">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
       <span>Chat</span>
