@@ -417,6 +417,106 @@ function processNewMessages(data) {
   }
 }
 
+/* ─── Chat Canvas Animation ─── */
+let chatAnimStarted = false;
+function startChatAnim() {
+  if (chatAnimStarted) return;
+  chatAnimStarted = true;
+  const canvas = document.getElementById('chat-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const { sin, cos, hypot, max, min, PI, random } = Math;
+  let w, h;
+
+  function resize() {
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const cssW = window.innerWidth;
+    const cssH = window.innerHeight;
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    w = canvas.width;
+    h = canvas.height;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.translate(w / 2, h / 2);
+    ctx.scale(w, w);
+  }
+  resize();
+  addEventListener('resize', resize);
+
+  const pt = (x, y) => ({ x, y });
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const lerpPt = (a, b, t) => pt(lerp(a.x, b.x, t), lerp(a.y, b.y, t));
+  const many = (n, f) => Array.from({ length: n }, (_, i) => f(i));
+  const smoothstep = t => 3 * t * t - 2 * t * t * t;
+
+  function tentacle(from, to, t) {
+    const count = 60;
+    t = smoothstep(t);
+    for (let i = 0; i < count; i++) {
+      const x = i / count;
+      if (x > t) return;
+      const p = lerpPt(from, to, x);
+      const r = ((x - 0.5) ** 2 + 0.1) ** 2 * 0.015;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r, 0, PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function thing(id) {
+    return {
+      id,
+      pos: { x: (random() * 2 - 1) * 0.2, y: (random() * 2 - 1) * 0.2 },
+      target: { x: 0, y: 0 },
+      hue: id * 180,
+      pts: many(100, () => ({ x: (random() * 2 - 1) * 0.6, y: (random() * 2 - 1) * 0.6, t: 0 })),
+      tick(t) {
+        this.hue = (this.hue + 1) % 360;
+        ctx.fillStyle = `hsl(${this.hue}, 100%, 50%)`;
+        this.pos.x += (this.target.x - this.pos.x) / (15 + id * 5);
+        this.pos.y += (this.target.y - this.pos.y) / (15 + id * 5);
+        const c = pt(this.pos.x, this.pos.y);
+        this.pts.forEach(p => {
+          const dist = hypot(p.x - c.x, p.y - c.y);
+          p.t = max(min(1, p.t + (dist < 0.12 ? 0.04 : -0.06)), 0);
+          if (p.t > 0) tentacle(c, p, p.t);
+        });
+      }
+    };
+  }
+
+  const things = [thing(0), thing(1)];
+  let lastPointer = 0;
+
+  canvas.addEventListener('pointermove', e => {
+    const cssW = window.innerWidth;
+    const x = (e.clientX - cssW / 2) / cssW;
+    const y = (e.clientY - window.innerHeight / 2) / cssW;
+    lastPointer = performance.now();
+    things[0].target = { x: x - 0.05, y: y - 0.05 };
+    things[1].target = { x: x + 0.05, y: y + 0.05 };
+  }, { passive: true });
+
+  requestAnimationFrame(function frame(t) {
+    t /= 1000;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+    if (performance.now() - lastPointer > 2000) {
+      things.forEach((th, i) => {
+        th.target.x = cos(t * 0.5 + i) * 0.2;
+        th.target.y = sin(t * 0.7 + i) * 0.2;
+      });
+    }
+    things.forEach(th => th.tick(t));
+    requestAnimationFrame(frame);
+  });
+}
+
 /* ─── Regular Chat ─── */
 function initChat() {
   const container = document.getElementById('chat-messages');
@@ -710,6 +810,7 @@ navChat.addEventListener('click', () => {
   hideAllPages();
   deactivateAllNav();
   navChat.classList.add('active');
+  startChatAnim();
   if (isAdmin) {
     pageAdmin.classList.add('open');
     renderUserList();

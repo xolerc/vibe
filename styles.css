@@ -148,9 +148,14 @@ html, body {
 }
 #page-chat.open { display: flex; }
 
+#chat-canvas {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  display: block; pointer-events: none; z-index: 0;
+}
+
 #chat-container {
   display: flex; flex-direction: column;
-  height: 100%; padding-bottom: 60px;
+  height: 100%; padding-bottom: 60px; position: relative; z-index: 1;
 }
 #chat-header {
   display: flex; align-items: center; justify-content: space-between;
