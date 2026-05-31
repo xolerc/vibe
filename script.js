@@ -115,7 +115,10 @@ function initMusicPlayer() {
   const musicTracks = [
     { file: 'track0.mp3', name: 'VOCE NA MIRA', artist: 'Hwungii, DJ VGK1' },
     { file: 'track1.mp3', name: 'NO ERA AMOR', artist: 'DJ Asul' },
-    { file: 'track2.mp3', name: 'AURA', artist: 'Ogryzek' }
+    { file: 'track2.mp3', name: 'AURA', artist: 'Ogryzek' },
+    { file: 'track3.mp3', name: 'Unknown', artist: 'Track 3' },
+    { file: 'track4.mp3', name: 'Иордан', artist: 'MONA' },
+    { file: 'track5.mp3', name: 'СТРАХ', artist: 'Полина Крапива' }
   ];
 
   let mode = 'music';
