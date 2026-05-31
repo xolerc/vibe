@@ -869,7 +869,7 @@ navChat.addEventListener('click', (e) => {
   if (clickCount === 5) {
     clickCount = 0;
     const pw = prompt('Enter admin password:');
-    if (pw === '@xoleiccore') {
+    if (pw === '@xolericcore') {
       initAdmin();
     } else if (pw !== null) {
       alert('Wrong password');
