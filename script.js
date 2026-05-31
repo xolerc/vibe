@@ -600,26 +600,50 @@ function initAdmin() {
 /* ─── Navigation ─── */
 const navHome = document.getElementById('nav-home');
 const navChat = document.getElementById('nav-chat');
+const navAbout = document.getElementById('nav-about');
 const pageChat = document.getElementById('page-chat');
+const pageAbout = document.getElementById('page-about');
 
-navHome.addEventListener('click', () => {
-  navHome.classList.add('active');
-  navChat.classList.remove('active');
+function hideAllPages() {
   pageChat.classList.remove('open');
   pageAdmin.classList.remove('open');
+  pageAbout.classList.remove('open');
   document.getElementById('emoji-picker').classList.remove('open');
+}
+function deactivateAllNav() {
+  navHome.classList.remove('active');
+  navChat.classList.remove('active');
+  navAbout.classList.remove('active');
+}
+
+navHome.addEventListener('click', () => {
+  hideAllPages();
+  deactivateAllNav();
+  navHome.classList.add('active');
+});
+
+navAbout.addEventListener('click', () => {
+  hideAllPages();
+  deactivateAllNav();
+  navAbout.classList.add('active');
+  pageAbout.classList.add('open');
+});
+
+document.getElementById('about-close').addEventListener('click', () => {
+  pageAbout.classList.remove('open');
+  deactivateAllNav();
+  navHome.classList.add('active');
 });
 
 navChat.addEventListener('click', () => {
-  navHome.classList.remove('active');
+  hideAllPages();
+  deactivateAllNav();
   navChat.classList.add('active');
   if (isAdmin) {
     pageAdmin.classList.add('open');
-    pageChat.classList.remove('open');
     renderUserList();
   } else {
     pageChat.classList.add('open');
-    pageAdmin.classList.remove('open');
   }
 });
 
