@@ -80,6 +80,8 @@ function initMusicPlayer() {
     pauseIcon.style.display = on ? '' : 'none';
   }
 
+  let pendingPlay = false;
+
   function loadTrack(index) {
     const t = tracks[index];
     audio.src = t.file;
@@ -89,10 +91,20 @@ function initMusicPlayer() {
     currentTrack = index;
   }
 
+  function doPlay() {
+    audio.play().then(() => {
+      setPlayingUI(true);
+      if (globe) globe.resume();
+    }).catch(() => {});
+  }
+
   function play() {
-    audio.play();
-    setPlayingUI(true);
-    if (globe) globe.resume();
+    if (audio.readyState >= 2) {
+      doPlay();
+    } else {
+      pendingPlay = true;
+      audio.load();
+    }
   }
 
   function pause() {
@@ -100,6 +112,13 @@ function initMusicPlayer() {
     setPlayingUI(false);
     if (globe) globe.pause();
   }
+
+  audio.addEventListener('canplay', () => {
+    if (pendingPlay) {
+      pendingPlay = false;
+      doPlay();
+    }
+  });
 
   loadTrack(0);
 
@@ -167,11 +186,12 @@ function initGlobe() {
   const loader = new THREE.TextureLoader();
 
   const earthMat = new THREE.MeshStandardMaterial({
+    color: 0x4488cc,
     map: loader.load('https://raw.githubusercontent.com/turban/webgl-earth/master/images/2_no_clouds_4k.jpg'),
     bumpMap: loader.load('https://raw.githubusercontent.com/turban/webgl-earth/master/images/elev_bump_4k.jpg'),
-    bumpScale: 0.02,
-    roughness: 0.8,
-    metalness: 0.1
+    bumpScale: 0.015,
+    roughness: 0.7,
+    metalness: 0.05
   });
   const earth = new THREE.Mesh(new THREE.SphereGeometry(0.6, 32, 32), earthMat);
   scene.add(earth);
