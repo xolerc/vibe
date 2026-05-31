@@ -1,7 +1,4 @@
-/* ─── Firebase ─── */
 const FB = 'https://xoleric-9ad1b-default-rtdb.firebaseio.com/vibe';
-
-/* ─── Loading ─── */
 const loadingScreen = document.getElementById('loading-screen');
 const pageHome = document.getElementById('page-home');
 const loadingVideo = document.getElementById('loading-video');
@@ -23,7 +20,6 @@ document.body.addEventListener('click', () => {
   if (!loadingScreen.classList.contains('hidden')) loadingVideo.play();
 }, { once: true });
 
-/* ─── Background Video Loop ─── */
 function startBackgroundLoop() {
   let activeIdx = 0;
   const OVERLAP = 1.5;
@@ -47,7 +43,6 @@ function startBackgroundLoop() {
   });
 }
 
-/* ─── Music Player + Globe ─── */
 function initMusicPlayer() {
   const tracks = [
     { file: 'track0.mp3', name: 'VOCE NA MIRA', artist: 'Hwungii, DJ VGK1' },
@@ -174,7 +169,6 @@ function initGlobe() {
   return { resume() { playing = true; }, pause() { playing = false; } };
 }
 
-/* ─── Storage ─── */
 function loadJSON(key, def) {
   try { return JSON.parse(localStorage.getItem(key)) || def; }
   catch { return def; }
@@ -197,8 +191,7 @@ function formatTime(ts) {
   return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
 }
 
-/* ─── Chat Bubbles ─── */
-function createMessageBubble(text, type, ts, opts) {
+function makeBubble(text, type, ts, opts) {
   opts = opts || {};
   const div = document.createElement('div');
   div.className = 'chat-msg ' + type;
@@ -210,51 +203,46 @@ function createMessageBubble(text, type, ts, opts) {
   }
   if (opts.isImage) {
     const img = document.createElement('img');
-    img.className = 'chat-img';
-    img.src = text;
-    img.alt = 'Shared image';
-    img.addEventListener('click', () => openImageModal(text));
+    img.className = 'chat-img'; img.src = text;
+    img.addEventListener('click', () => openModal(text));
     div.appendChild(img);
   } else if (opts.isFile) {
-    const link = document.createElement('a');
-    link.href = text; link.target = '_blank';
-    link.textContent = opts.fileName || '📎 File';
-    link.style.color = '#8ab'; link.style.textDecoration = 'underline';
-    div.appendChild(link);
+    const a = document.createElement('a');
+    a.href = text; a.target = '_blank';
+    a.textContent = opts.fileName || '📎 File';
+    a.style.color = '#8ab'; a.style.textDecoration = 'underline';
+    div.appendChild(a);
   } else {
     const t = document.createElement('span');
     t.textContent = text;
     div.appendChild(t);
   }
   const time = document.createElement('span');
-  time.className = 'time';
-  time.textContent = formatTime(ts);
+  time.className = 'time'; time.textContent = formatTime(ts);
   div.appendChild(time);
   return div;
 }
 
-function openImageModal(src) {
-  let modal = document.getElementById('img-modal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'img-modal';
-    modal.addEventListener('click', () => modal.classList.remove('open'));
-    document.body.appendChild(modal);
+function openModal(src) {
+  let m = document.getElementById('img-modal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'img-modal';
+    m.addEventListener('click', () => m.classList.remove('open'));
+    document.body.appendChild(m);
   }
-  modal.innerHTML = '<img src="' + src + '" alt="Full image">';
-  modal.classList.add('open');
+  m.innerHTML = '<img src="' + src + '" alt="">';
+  m.classList.add('open');
 }
 
-function appendChatMessage(msg) {
-  const el = createMessageBubble(msg.text, msg.type, msg.time, msg);
-  const container = document.getElementById('chat-messages');
+function appendMsg(container, msg) {
+  const el = makeBubble(msg.text, msg.type, msg.time, msg);
   const empty = container.querySelector('.chat-empty');
   if (empty) empty.remove();
   container.appendChild(el);
   el.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
 
-/* ─── Firebase ─── */
 let knownIds = new Set(loadJSON('vibe_fb_ids', []));
 
 async function fbSend(msg) {
@@ -276,11 +264,17 @@ async function fbFetchAll() {
   } catch { return null; }
 }
 
-function saveKnownIds() {
-  saveJSON('vibe_fb_ids', [...knownIds]);
+/* ─── Polling ─── */
+let pollTimer = null;
+function startPolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(async () => {
+    const data = await fbFetchAll();
+    processNewMessages(data);
+  }, 2000);
 }
 
-function processFirebaseMessages(data) {
+function processNewMessages(data) {
   if (!data) return;
   const newMsgs = [];
   Object.entries(data).forEach(([pushId, msg]) => {
@@ -289,173 +283,317 @@ function processFirebaseMessages(data) {
     newMsgs.push({ pushId, ...msg });
   });
   if (!newMsgs.length) return;
-  saveKnownIds();
+  saveJSON('vibe_fb_ids', [...knownIds]);
 
-  if (isAdmin) {
-    /* Admin mode: show all messages from all users */
-    const container = document.getElementById('chat-messages');
-    newMsgs.sort((a, b) => (a.time || 0) - (b.time || 0));
-    newMsgs.forEach(msg => {
-      if (msg.senderId === 'admin' || msg.senderId === myId) {
-        appendChatMessage({ text: msg.text, type: 'own', time: msg.time, isImage: msg.isImage, isFile: msg.isFile, fileName: msg.fileName });
-      } else {
-        appendChatMessage({ text: msg.text, type: 'other', time: msg.time, sender: msg.senderId, isImage: msg.isImage, isFile: msg.isFile, fileName: msg.fileName });
+  /* User chat: only admin replies */
+  const userHist = loadJSON('vibe_chat', []);
+  let userChanged = false;
+
+  /* Admin data: all user messages */
+  const admData = loadJSON('vibe_admin_data', {});
+  let admChanged = false;
+
+  newMsgs.forEach(m => {
+    /* user chat */
+    if (m.senderId === 'admin') {
+      userHist.push({ text: m.text, type: 'other', time: m.time, isImage: m.isImage, isFile: m.isFile, fileName: m.fileName });
+      userChanged = true;
+      if (document.getElementById('page-chat').classList.contains('open')) {
+        appendMsg(document.getElementById('chat-messages'), { text: m.text, type: 'other', time: m.time, isImage: m.isImage, isFile: m.isFile, fileName: m.fileName });
       }
-    });
-    /* Also save admin msgs to user's chat for persistence */
-    const chatHistory = loadJSON('vibe_chat', []);
-    newMsgs.forEach(msg => {
-      if (msg.senderId === 'admin') {
-        chatHistory.push({ text: msg.text, type: 'other', time: msg.time, isImage: msg.isImage, isFile: msg.isFile, fileName: msg.fileName });
-      }
-    });
-    saveJSON('vibe_chat', chatHistory);
-  } else {
-    /* User mode: only show admin's replies */
-    const chatHistory = loadJSON('vibe_chat', []);
-    let changed = false;
-    newMsgs.forEach(msg => {
-      if (msg.senderId === 'admin') {
-        chatHistory.push({ text: msg.text, type: 'other', time: msg.time, isImage: msg.isImage, isFile: msg.isFile, fileName: msg.fileName });
-        changed = true;
-        if (document.getElementById('page-chat').classList.contains('open')) {
-          appendChatMessage({ text: msg.text, type: 'other', time: msg.time, isImage: msg.isImage, isFile: msg.isFile, fileName: msg.fileName });
-        }
-      }
-    });
-    if (changed) saveJSON('vibe_chat', chatHistory);
-  }
-}
+    }
 
-/* ─── Polling ─── */
-let pollTimer = null;
-function startPolling() {
-  if (pollTimer) return;
-  pollTimer = setInterval(async () => {
-    const data = await fbFetchAll();
-    processFirebaseMessages(data);
-  }, 2000);
-}
-
-/* ─── Chat ─── */
-function clearChatDisplay() {
-  const container = document.getElementById('chat-messages');
-  container.innerHTML = '<div class="chat-empty">No messages yet. Start a conversation!</div>';
-}
-
-function loadChatHistory() {
-  clearChatDisplay();
-  const chatHistory = loadJSON('vibe_chat', []);
-  chatHistory.forEach(m => appendChatMessage(m));
-}
-
-function initChat() {
-  const messagesEl = document.getElementById('chat-messages');
-  const input = document.getElementById('chat-input');
-  const sendBtn = document.getElementById('chat-send');
-  const emojiBtn = document.getElementById('chat-emoji-btn');
-  const emojiPicker = document.getElementById('emoji-picker');
-  const emojiGrid = document.getElementById('emoji-grid');
-  const fileInput = document.getElementById('file-input');
-  const attachBtn = document.getElementById('chat-attach-btn');
-  const statusEl = document.getElementById('chat-status');
-
-  /* Emoji grid */
-  const EMOJIS = '😀😃😄😁😅😂🤣😊😇🙂😉😌😍🥰😘😗😋😛😜🤪😝🤑🤗🤭🤫🤔🤐🤨😐😑😶😏😒🙄😬🤥😌😔😪🤤😴😷🤒🤕🤢🤮🤧🥵🥶🥴😵🤯🤠🥳🥸😎🤓🧐😕😟🙁😮😯😲😳🥺😢😭😤😠😡🤬😈👿💀☠💩🤡👹👺👻👽👾🤖💋💌💘💝💖💗💓💞💕💟❣💔❤🧡💛💚💙💜🤎🖤🤍💯💢💥💫💦💨🕳💣💬🗨🗯💭';
-  EMOJIS.split('').forEach(e => {
-    const span = document.createElement('span');
-    span.textContent = e;
-    span.addEventListener('click', () => {
-      input.focus();
-      const start = input.selectionStart;
-      const end = input.selectionEnd;
-      input.value = input.value.substring(0, start) + e + input.value.substring(end);
-      input.selectionStart = input.selectionEnd = start + e.length;
-      input.dispatchEvent(new Event('input'));
-      emojiPicker.classList.remove('open');
-    });
-    emojiGrid.appendChild(span);
-  });
-
-  emojiBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    emojiPicker.classList.toggle('open');
-  });
-  document.addEventListener('click', (e) => {
-    if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) {
-      emojiPicker.classList.remove('open');
+    /* admin data */
+    if (m.senderId && m.senderId !== 'admin') {
+      if (!admData[m.senderId]) admData[m.senderId] = { messages: [], unread: 0 };
+      admData[m.senderId].messages.push({
+        sender: m.senderId, text: m.text, time: m.time,
+        isImage: m.isImage, isFile: m.isFile, fileName: m.fileName
+      });
+      admData[m.senderId].unread = (admData[m.senderId].unread || 0) + 1;
+      admChanged = true;
     }
   });
 
-  /* Attach file */
+  if (userChanged) saveJSON('vibe_chat', userHist);
+  if (admChanged) saveJSON('vibe_admin_data', admData);
+
+  /* Update admin UI if open */
+  if (admChanged && pageAdmin.classList.contains('open')) {
+    renderUserList();
+    if (selectedAdmUser && admData[selectedAdmUser]) {
+      renderAdmMessages(selectedAdmUser);
+    }
+  }
+}
+
+/* ─── Regular Chat ─── */
+function initChat() {
+  const container = document.getElementById('chat-messages');
+  const input = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('chat-send');
+  const emojiBtn = document.getElementById('chat-emoji-btn');
+  const emojiPick = document.getElementById('emoji-picker');
+  const emojiGrid = document.getElementById('emoji-grid');
+  const fileInput = document.getElementById('file-input');
+  const attachBtn = document.getElementById('chat-attach-btn');
+
+  const EMOJIS = '😀😃😄😁😅😂🤣😊😇🙂😉😌😍🥰😘😗😋😛😜🤪😝🤑🤗🤭🤫🤔🤐🤨😐😑😶😏😒🙄😬🤥😌😔😪🤤😴😷🤒🤕🤢🤮🤧🥵🥶🥴😵🤯🤠🥳🥸😎🤓🧐😕😟🙁😮😯😲😳🥺😢😭😤😠😡🤬😈👿💀☠💩🤡👹👺👻👽👾🤖💋💌💘💝💖💗💓💞💕💟❣💔❤🧡💛💚💙💜🤎🖤🤍💯💢💥💫💦💨🕳💣💬🗨🗯💭';
+  EMOJIS.split('').forEach(e => {
+    const s = document.createElement('span');
+    s.textContent = e;
+    s.addEventListener('click', () => {
+      input.focus();
+      const st = input.selectionStart, en = input.selectionEnd;
+      input.value = input.value.substring(0, st) + e + input.value.substring(en);
+      input.selectionStart = input.selectionEnd = st + e.length;
+      input.dispatchEvent(new Event('input'));
+      emojiPick.classList.remove('open');
+    });
+    emojiGrid.appendChild(s);
+  });
+  emojiBtn.addEventListener('click', e => { e.stopPropagation(); emojiPick.classList.toggle('open'); });
+  document.addEventListener('click', e => {
+    if (!emojiPick.contains(e.target) && e.target !== emojiBtn) emojiPick.classList.remove('open');
+  });
+
   attachBtn.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 500 * 1024) { alert('File too large (max 500KB)'); return; }
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const dataUrl = ev.target.result;
-      const isImage = file.type.startsWith('image/');
-      const msg = {
-        text: dataUrl, type: 'own', time: Date.now(),
-        isImage, isFile: !isImage, fileName: isImage ? null : file.name
-      };
-      appendChatMessage(msg);
+  fileInput.addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    if (f.size > 500*1024) { alert('File too large (max 500KB)'); return; }
+    const r = new FileReader();
+    r.onload = ev => {
+      const isImg = f.type.startsWith('image/');
       const sid = isAdmin ? 'admin' : myId;
-      fbSend({ senderId: sid, text: dataUrl, time: msg.time, isImage, isFile: !isImage, fileName: msg.fileName });
+      const msg = { text: ev.target.result, type: 'own', time: Date.now(), isImage: isImg, isFile: !isImg, fileName: isImg ? null : f.name };
+      appendMsg(container, msg);
+      fbSend({ senderId: sid, text: ev.target.result, time: msg.time, isImage: isImg, isFile: !isImg, fileName: msg.fileName });
     };
-    reader.readAsDataURL(file);
+    r.readAsDataURL(f);
     fileInput.value = '';
   });
 
-  /* Load chat history */
-  loadChatHistory();
+  loadJSON('vibe_chat', []).forEach(m => appendMsg(container, m));
 
-  /* Send text */
-  function sendMsg() {
-    const text = input.value.trim();
-    if (!text) return;
+  function send() {
+    const t = input.value.trim();
+    if (!t) return;
     const sid = isAdmin ? 'admin' : myId;
-    const msg = { text, type: 'own', time: Date.now() };
-    appendChatMessage(msg);
-    fbSend({ senderId: sid, text, time: msg.time });
+    const msg = { text: t, type: 'own', time: Date.now() };
+    appendMsg(container, msg);
+    fbSend({ senderId: sid, text: t, time: msg.time });
     input.value = '';
     input.focus();
   }
-  sendBtn.addEventListener('click', sendMsg);
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMsg(); });
+  sendBtn.addEventListener('click', send);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
-  statusEl.textContent = 'online';
+  document.getElementById('chat-status').textContent = 'online';
   startPolling();
 }
 
-/* ─── Admin mode ─── */
-function activateAdmin() {
+/* ─── Admin Page ─── */
+const pageAdmin = document.getElementById('page-admin');
+let selectedAdmUser = null;
+
+function renderUserList() {
+  const list = document.getElementById('admin-user-list');
+  const count = document.getElementById('admin-user-count');
+  const admData = loadJSON('vibe_admin_data', {});
+  list.innerHTML = '';
+  const ids = Object.keys(admData);
+  count.textContent = '(' + ids.length + ')';
+  ids.forEach(id => {
+    const d = admData[id];
+    const div = document.createElement('div');
+    div.className = 'admin-user-item';
+    div.innerHTML = '<span class="u-name">' + id.substring(0, 12) + '...</span>';
+    if (d.unread > 0) {
+      div.innerHTML += '<span class="u-badge">' + d.unread + '</span>';
+    }
+    div.addEventListener('click', () => openAdmChat(id));
+    list.appendChild(div);
+  });
+}
+
+function openAdmChat(userId) {
+  selectedAdmUser = userId;
+  document.getElementById('admin-chat-view').classList.add('open');
+  document.getElementById('admin-user-view').style.display = 'none';
+  document.getElementById('admin-chat-title').textContent = userId.substring(0, 16) + '...';
+
+  /* Clear unread */
+  const admData = loadJSON('vibe_admin_data', {});
+  if (admData[userId]) {
+    admData[userId].unread = 0;
+    saveJSON('vibe_admin_data', admData);
+  }
+  renderAdmMessages(userId);
+  renderUserList();
+}
+
+function renderAdmMessages(userId) {
+  const cont = document.getElementById('admin-chat-msgs');
+  cont.innerHTML = '';
+  const admData = loadJSON('vibe_admin_data', {});
+  const d = admData[userId];
+  if (!d || !d.messages.length) {
+    cont.innerHTML = '<div class="chat-empty">No messages</div>';
+    return;
+  }
+  d.messages.forEach(m => {
+    const fromAdmin = m.sender === 'admin';
+    appendMsg(cont, {
+      text: m.text, type: fromAdmin ? 'own' : 'other',
+      time: m.time, sender: fromAdmin ? null : m.sender,
+      isImage: m.isImage, isFile: m.isFile, fileName: m.fileName
+    });
+  });
+}
+
+function initAdmin() {
   if (isAdmin) return;
   isAdmin = true;
-  document.getElementById('chat-status').textContent = 'Admin';
-  document.getElementById('chat-header').querySelector('span').textContent = 'Chat (Admin)';
 
-  clearChatDisplay();
+  pageAdmin.classList.add('open');
+  document.getElementById('page-chat').classList.remove('open');
+  document.getElementById('admin-user-view').style.display = 'flex';
+  document.getElementById('admin-chat-view').classList.remove('open');
+  selectedAdmUser = null;
 
-  /* Load ALL messages from Firebase */
+  /* Reconcile old data */
+  const admData = loadJSON('vibe_admin_data', {});
+  const old = loadJSON('vibe_admin_chats', null);
+  if (Array.isArray(old)) {
+    old.forEach(m => {
+      if (!admData[m.sender]) admData[m.sender] = { messages: [], unread: 0 };
+      admData[m.sender].messages.push({ sender: m.sender, text: m.text, time: m.time, isImage: m.isImage, isFile: m.isFile, fileName: m.fileName });
+    });
+    localStorage.removeItem('vibe_admin_chats');
+  }
+  loadJSON('vibe_known_users', []).forEach(uid => {
+    if (!admData[uid]) admData[uid] = { messages: [], unread: 0 };
+  });
+  saveJSON('vibe_admin_data', admData);
+  renderUserList();
+
+  /* Back */
+  document.getElementById('admin-back-btn').addEventListener('click', () => {
+    document.getElementById('admin-chat-view').classList.remove('open');
+    document.getElementById('admin-user-view').style.display = 'flex';
+    selectedAdmUser = null;
+    renderUserList();
+  });
+
+  /* Delete user chat */
+  document.getElementById('admin-delete-btn').addEventListener('click', () => {
+    if (!selectedAdmUser) return;
+    if (!confirm('Delete all messages from this user?')) return;
+    const admData = loadJSON('vibe_admin_data', {});
+    if (admData[selectedAdmUser]) {
+      admData[selectedAdmUser].messages = [];
+      admData[selectedAdmUser].unread = 0;
+      saveJSON('vibe_admin_data', admData);
+    }
+    renderAdmMessages(selectedAdmUser);
+    renderUserList();
+  });
+
+  /* Send reply */
+  const inp = document.getElementById('admin-inp');
+  const send = document.getElementById('admin-send');
+  function sendReply() {
+    const t = inp.value.trim();
+    if (!t || !selectedAdmUser) return;
+    const admData = loadJSON('vibe_admin_data', {});
+    if (!admData[selectedAdmUser]) admData[selectedAdmUser] = { messages: [], unread: 0 };
+    admData[selectedAdmUser].messages.push({ sender: 'admin', text: t, time: Date.now() });
+    saveJSON('vibe_admin_data', admData);
+    renderAdmMessages(selectedAdmUser);
+    renderUserList();
+
+    /* Also push to user's chat */
+    const userHist = loadJSON('vibe_chat', []);
+    userHist.push({ text: t, type: 'other', time: Date.now() });
+    saveJSON('vibe_chat', userHist);
+
+    fbSend({ senderId: 'admin', targetId: selectedAdmUser, text: t, time: Date.now() });
+    inp.value = '';
+  }
+  send.addEventListener('click', sendReply);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') sendReply(); });
+
+  /* Admin emoji */
+  const aemojiBtn = document.getElementById('admin-emoji-btn');
+  const aemojiPick = document.getElementById('admin-emoji-picker');
+  const aemojiGrid = document.getElementById('admin-emoji-grid');
+  const EMOJIS = '😀😃😄😁😅😂🤣😊😇🙂😉😌😍🥰😘😗😋😛😜🤪😝🤑🤗🤭🤫🤔🤐🤨😐😑😶😏😒🙄😬🤥😌😔😪🤤😴😷🤒🤕🤢🤮🤧🥵🥶🥴😵🤯🤠🥳🥸😎🤓🧐😕😟🙁😮😯😲😳🥺😢😭😤😠😡🤬😈👿💀☠💩🤡👹👺👻👽👾🤖💋💌💘💝💖💗💓💞💕💟❣💔❤🧡💛💚💙💜🤎🖤🤍💯💢💥💫💦💨🕳💣💬🗨🗯💭';
+  EMOJIS.split('').forEach(e => {
+    const s = document.createElement('span');
+    s.textContent = e;
+    s.addEventListener('click', () => {
+      inp.focus();
+      const st = inp.selectionStart, en = inp.selectionEnd;
+      inp.value = inp.value.substring(0, st) + e + inp.value.substring(en);
+      inp.selectionStart = inp.selectionEnd = st + e.length;
+      inp.dispatchEvent(new Event('input'));
+      aemojiPick.classList.remove('open');
+    });
+    aemojiGrid.appendChild(s);
+  });
+  aemojiBtn.addEventListener('click', e => { e.stopPropagation(); aemojiPick.classList.toggle('open'); });
+  document.addEventListener('click', e => {
+    if (aemojiPick && !aemojiPick.contains(e.target) && e.target !== aemojiBtn) aemojiPick.classList.remove('open');
+  });
+
+  /* Admin file attach */
+  const aAttach = document.getElementById('admin-attach-btn');
+  const aFile = document.getElementById('admin-file-inp');
+  aAttach.addEventListener('click', () => aFile.click());
+  aFile.addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f || !selectedAdmUser) return;
+    if (f.size > 500*1024) { alert('File too large (max 500KB)'); return; }
+    const r = new FileReader();
+    r.onload = ev => {
+      const isImg = f.type.startsWith('image/');
+      const admData = loadJSON('vibe_admin_data', {});
+      if (!admData[selectedAdmUser]) admData[selectedAdmUser] = { messages: [], unread: 0 };
+      admData[selectedAdmUser].messages.push({
+        sender: 'admin', text: ev.target.result, time: Date.now(),
+        isImage: isImg, isFile: !isImg, fileName: isImg ? null : f.name
+      });
+      saveJSON('vibe_admin_data', admData);
+      renderAdmMessages(selectedAdmUser);
+      renderUserList();
+      fbSend({ senderId: 'admin', targetId: selectedAdmUser, text: ev.target.result, time: Date.now(), isImage: isImg, isFile: !isImg, fileName: isImg ? null : f.name });
+    };
+    r.readAsDataURL(f);
+    aFile.value = '';
+  });
+
+  /* Sync immediately */
   fbFetchAll().then(data => {
     if (!data) return;
-    const all = Object.entries(data)
-      .map(([pushId, msg]) => ({ pushId, ...msg }))
-      .filter(m => m.senderId)
-      .sort((a, b) => (a.time || 0) - (b.time || 0));
-    all.forEach(msg => {
-      if (msg.senderId === 'admin' || msg.senderId === myId) {
-        appendChatMessage({ text: msg.text, type: 'own', time: msg.time, isImage: msg.isImage, isFile: msg.isFile, fileName: msg.fileName });
-      } else {
-        appendChatMessage({ text: msg.text, type: 'other', time: msg.time, sender: msg.senderId, isImage: msg.isImage, isFile: msg.isFile, fileName: msg.fileName });
+    const allIds = Object.keys(data);
+    const admData = loadJSON('vibe_admin_data', {});
+    let changed = false;
+    allIds.forEach(pushId => {
+      if (knownIds.has(pushId)) return;
+      knownIds.add(pushId);
+      const m = data[pushId];
+      if (m.senderId && m.senderId !== 'admin') {
+        if (!admData[m.senderId]) admData[m.senderId] = { messages: [], unread: 0 };
+        admData[m.senderId].messages.push({ sender: m.senderId, text: m.text, time: m.time, isImage: m.isImage, isFile: m.isFile, fileName: m.fileName });
+        changed = true;
       }
     });
-    /* Track all IDs */
-    Object.keys(data).forEach(id => knownIds.add(id));
-    saveKnownIds();
+    if (changed) {
+      saveJSON('vibe_admin_data', admData);
+      saveJSON('vibe_fb_ids', [...knownIds]);
+    }
+    renderUserList();
   });
 }
 
@@ -468,16 +606,24 @@ navHome.addEventListener('click', () => {
   navHome.classList.add('active');
   navChat.classList.remove('active');
   pageChat.classList.remove('open');
+  pageAdmin.classList.remove('open');
   document.getElementById('emoji-picker').classList.remove('open');
 });
 
 navChat.addEventListener('click', () => {
   navHome.classList.remove('active');
   navChat.classList.add('active');
-  pageChat.classList.add('open');
+  if (isAdmin) {
+    pageAdmin.classList.add('open');
+    pageChat.classList.remove('open');
+    renderUserList();
+  } else {
+    pageChat.classList.add('open');
+    pageAdmin.classList.remove('open');
+  }
 });
 
-/* ─── 5-Click Admin Activation ─── */
+/* ─── 5-Click ─── */
 let clickCount = 0;
 let lastClick = 0;
 document.addEventListener('click', (e) => {
@@ -486,7 +632,7 @@ document.addEventListener('click', (e) => {
   if (now - lastClick < 500) clickCount++;
   else clickCount = 1;
   lastClick = now;
-  if (clickCount === 5) { clickCount = 0; activateAdmin(); }
+  if (clickCount === 5) { clickCount = 0; initAdmin(); }
 });
 
 /* ─── Init ─── */

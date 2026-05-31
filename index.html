@@ -64,6 +64,40 @@
     <input id="file-input" type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" style="display:none">
   </div>
 
+  <div id="page-admin" class="page">
+    <div id="admin-user-view">
+      <div class="admin-view-header">
+        <span>Users</span>
+        <span id="admin-user-count"></span>
+      </div>
+      <div id="admin-user-list"></div>
+    </div>
+    <div id="admin-chat-view">
+      <div id="admin-chat-top">
+        <button id="admin-back-btn">←</button>
+        <span id="admin-chat-title"></span>
+        <button id="admin-delete-btn">🗑</button>
+      </div>
+      <div id="admin-chat-msgs">
+        <div class="chat-empty">Select a user</div>
+      </div>
+      <div id="admin-chat-input-bar">
+        <button id="admin-emoji-btn" class="chat-act-btn">☺</button>
+        <button id="admin-attach-btn" class="chat-act-btn">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+        </button>
+        <input id="admin-inp" type="text" placeholder="Reply..." maxlength="500">
+        <button id="admin-send" class="chat-act-btn">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="admin-emoji-picker">
+      <div id="admin-emoji-grid"></div>
+    </div>
+    <input id="admin-file-inp" type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" style="display:none">
+  </div>
+
   <div id="bottom-nav">
     <button id="nav-home" class="nav-btn active">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
