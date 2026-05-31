@@ -72,6 +72,32 @@
       <svg style="position:absolute;width:0;height:0"><defs><linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8ab"/><stop offset="50%" stop-color="#6cf"/><stop offset="100%" stop-color="#a8f"/></linearGradient></defs></svg>
     </div>
     <div id="visit-counter">👁 <span id="visit-count">0</span></div>
+
+    <div id="music-panel">
+      <div id="mode-toggle">
+        <button id="mode-video" class="mode-btn">Video</button>
+        <button id="mode-music" class="mode-btn active">Music</button>
+      </div>
+      <div id="panel-top">
+        <div id="globe-wrap">
+          <div id="globe-container"></div>
+        </div>
+        <div id="track-info">
+          <span id="track-name"></span>
+          <span id="track-artist"></span>
+        </div>
+      </div>
+      <div id="panel-ctrls">
+        <button id="prev-btn" class="ctrl-btn"><svg viewBox="0 0 20 20" width="13" height="13"><polygon points="14,4 6,10 14,16" fill="#888"/><rect x="4" y="4" width="2" height="12" rx="0.5" fill="#888"/></svg></button>
+        <button id="play-btn" class="ctrl-btn">
+          <span id="play-icon"><svg viewBox="0 0 20 20" width="14" height="14"><polygon points="6,3 17,10 6,17" fill="#888"/></svg></span>
+          <span id="pause-icon" style="display:none"><svg viewBox="0 0 20 20" width="14" height="14"><rect x="4" y="3" width="4" height="14" rx="0.8" fill="#888"/><rect x="12" y="3" width="4" height="14" rx="0.8" fill="#888"/></svg></span>
+        </button>
+        <button id="next-btn" class="ctrl-btn"><svg viewBox="0 0 20 20" width="13" height="13"><polygon points="6,4 14,10 6,16" fill="#888"/><rect x="14" y="4" width="2" height="12" rx="0.5" fill="#888"/></svg></button>
+      </div>
+      <div id="progress-bar"><div id="progress-fill"></div></div>
+      <div id="yt-video-wrap"></div>
+    </div>
   </div>
 
   <div id="page-chat" class="page">
