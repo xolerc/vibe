@@ -1,5 +1,4 @@
 const FB = 'https://xoleric-9ad1b-default-rtdb.firebaseio.com/vibe';
-const YT_KEY = 'AIzaSyAwpEdIA_5_1aDPoMP0Q_ROE_zTrhoxwKs';
 const loadingScreen = document.getElementById('loading-screen');
 const pageHome = document.getElementById('page-home');
 const loadingVideo = document.getElementById('loading-video');
@@ -54,25 +53,30 @@ function initMusicPlayer() {
   const trackArtist = document.getElementById('track-artist');
   const playIcon = document.getElementById('play-icon');
   const pauseIcon = document.getElementById('pause-icon');
+  const videoWrap = document.getElementById('yt-video-wrap');
   let globe;
 
-  const fallbackTracks = [
+  const tracks = [
+    { file: 't0.mp3', name: 'Track 1', artist: 'XOLERIC' },
     { file: 'track0.mp3', name: 'VOCE NA MIRA', artist: 'Hwungii, DJ VGK1' },
     { file: 'track1.mp3', name: 'NO ERA AMOR', artist: 'DJ Asul' },
     { file: 'track2.mp3', name: 'AURA', artist: 'Ogryzek' }
   ];
 
-  let playlist = [];
   let currentTrack = 0;
-  let ytPlayer = null;
-  let ytReady = false;
-  let isPlaying = false;
-  let progressInterval = null;
-  let usingYt = false;
-  let playlistTimer = null;
-
   const audio = new Audio();
   audio.preload = 'auto';
+  let isPlaying = false;
+
+  const mv = document.createElement('video');
+  mv.src = 'music-video.mp4';
+  mv.muted = true;
+  mv.loop = true;
+  mv.playsInline = true;
+  mv.preload = 'auto';
+  mv.style.cssText = 'width:100%;height:100%;display:block;object-fit:cover';
+  videoWrap.innerHTML = '';
+  videoWrap.appendChild(mv);
 
   function setUI(on) {
     playIcon.style.display = on ? 'none' : '';
@@ -80,223 +84,57 @@ function initMusicPlayer() {
     isPlaying = on;
   }
 
-  function status(msg) {
-    trackName.textContent = msg;
-    trackArtist.textContent = '';
-  }
-
-  function loadFallback(index) {
-    usingYt = false;
-    const t = fallbackTracks[index];
+  function loadTrack(index) {
+    const t = tracks[index];
     currentTrack = index;
     trackName.textContent = t.name;
     trackArtist.textContent = t.artist;
     progressFill.style.width = '0%';
     audio.src = t.file;
+  }
+
+  function doPlay() {
     audio.play().then(() => {
       setUI(true);
+      mv.play().catch(() => {});
       if (globe) globe.resume();
     }).catch(() => {});
   }
 
+  function pause() {
+    audio.pause();
+    setUI(false);
+    mv.pause();
+    if (globe) globe.pause();
+  }
+
   audio.addEventListener('timeupdate', () => {
-    if (usingYt || !audio.duration) return;
-    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+    if (audio.duration) progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
   });
   audio.addEventListener('ended', () => {
-    if (usingYt) return;
-    loadFallback((currentTrack + 1) % fallbackTracks.length);
+    loadTrack((currentTrack + 1) % tracks.length);
+    doPlay();
   });
-  progressBar.addEventListener('click', (e) => {
-    if (usingYt && ytPlayer && ytReady) {
-      const rect = progressBar.getBoundingClientRect();
-      ytPlayer.seekTo(((e.clientX - rect.left) / rect.width) * ytPlayer.getDuration());
-      return;
-    }
-    if (!usingYt && audio.duration) {
-      const rect = progressBar.getBoundingClientRect();
-      audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
-    }
-  });
-
-  const queries = [
-    '50 Cent best hits', 'Eminem greatest hits',
-    'Snoop Dogg best songs', 'global rap hits 2026',
-    'hip hop classics', 'ozbek rap hitlari',
-    'uzbek pop eng sara', 'worldwide hip hop mix'
-  ];
-
-  function shuffle(a) {
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
-
-  async function fetchPlaylist() {
-    status('Loading songs...');
-    const all = [];
-    const qs = shuffle([...queries]).slice(0, 4);
-    for (const q of qs) {
-      try {
-        const r = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&maxResults=8&q=${encodeURIComponent(q)}&key=${YT_KEY}`
-        );
-        if (!r.ok) {
-          const errText = await r.text().catch(() => '');
-          continue;
-        }
-        const d = await r.json();
-        if (d.items) {
-          d.items.forEach(i => {
-            if (i.id.videoId) {
-              all.push({
-                id: i.id.videoId,
-                name: i.snippet.title.replace(/\([^)]*\)|\[[^\]]*\]/g, '').trim().substring(0, 40) || 'Unknown',
-                artist: i.snippet.channelTitle
-              });
-            }
-          });
-        }
-      } catch {}
-    }
-    if (!all.length) {
-      if (!usingYt && !isPlaying && !audio.src) loadFallback(0);
-      return;
-    }
-    playlist = shuffle(all);
-    if (playlist.length > 32) playlist = playlist.slice(0, 32);
-    if (ytPlayer && ytReady) {
-      usingYt = true;
-      const st = ytPlayer.getPlayerState();
-      if (st === -1 || st === 5) loadTrack(0);
-    }
-  }
-
-  function loadTrack(index) {
-    if (!playlist.length || !ytPlayer || !ytReady) return;
-    usingYt = true;
-    currentTrack = ((index % playlist.length) + playlist.length) % playlist.length;
-    const t = playlist[currentTrack];
-    trackName.textContent = t.name;
-    trackArtist.textContent = t.artist;
-    progressFill.style.width = '0%';
-    ytPlayer.loadVideoById(t.id);
-  }
-
-  function doPlay() {
-    if (usingYt && ytPlayer && ytReady) {
-      if (!playlist.length) { fetchPlaylist(); return; }
-      ytPlayer.playVideo();
-      setUI(true);
-      if (globe) globe.resume();
-      return;
-    }
-    if (!usingYt) {
-      if (!audio.src) { loadFallback(0); return; }
-      audio.play().then(() => {
-        setUI(true);
-        if (globe) globe.resume();
-      }).catch(() => {});
-    }
-  }
-
-  function pause() {
-    if (usingYt && ytPlayer) {
-      ytPlayer.pauseVideo();
-      setUI(false);
-      if (globe) globe.pause();
-      return;
-    }
-    if (!usingYt) {
-      audio.pause();
-      setUI(false);
-      if (globe) globe.pause();
-    }
-  }
-
-  function nextTrack() {
-    if (usingYt && playlist.length) {
-      loadTrack(currentTrack + 1);
-      if (ytPlayer) ytPlayer.playVideo();
-      setUI(true);
-      if (globe) globe.resume();
-    } else if (!usingYt) {
-      loadFallback((currentTrack + 1) % fallbackTracks.length);
-    }
-  }
-
-  function prevTrack() {
-    if (usingYt && playlist.length) {
-      if (ytPlayer && ytPlayer.getCurrentTime() > 3) { ytPlayer.seekTo(0); return; }
-      loadTrack(currentTrack - 1);
-      if (ytPlayer) ytPlayer.playVideo();
-      setUI(true);
-      if (globe) globe.resume();
-    } else if (!usingYt) {
-      loadFallback((currentTrack - 1 + fallbackTracks.length) % fallbackTracks.length);
-    }
-  }
-
-  function onPlayerState(e) {
-    if (e.data === YT.PlayerState.PLAYING) {
-      setUI(true);
-      if (globe) globe.resume();
-      if (progressInterval) clearInterval(progressInterval);
-      progressInterval = setInterval(() => {
-        if (!ytPlayer || !ytReady) return;
-        const dur = ytPlayer.getDuration();
-        const cur = ytPlayer.getCurrentTime();
-        if (dur) progressFill.style.width = (cur / dur * 100) + '%';
-      }, 500);
-    } else if (e.data === YT.PlayerState.PAUSED) {
-      setUI(false);
-      if (globe) globe.pause();
-      if (progressInterval) { clearInterval(progressInterval); progressInterval = null; }
-    } else if (e.data === YT.PlayerState.ENDED) {
-      if (playlist.length) nextTrack();
-    }
-  }
-
-  function initPlayer() {
-    try {
-      ytPlayer = new YT.Player('yt-player-box', {
-        height: '1', width: '1',
-        playerVars: { autoplay: 0, controls: 0, modestbranding: 1, rel: 0 },
-        events: {
-          onReady: () => { ytReady = true; fetchPlaylist(); },
-          onStateChange: onPlayerState,
-          onError: () => { status('YT error - using local'); }
-        }
-      });
-    } catch { loadFallback(0); }
-  }
 
   playBtn.addEventListener('click', () => {
-    if (usingYt && !playlist.length) { fetchPlaylist(); return; }
-    if (isPlaying) pause();
-    else doPlay();
+    if (audio.paused) { if (audio.src || (audio.src = tracks[0].file)) doPlay(); }
+    else pause();
   });
-  prevBtn.addEventListener('click', prevTrack);
-  nextBtn.addEventListener('click', nextTrack);
+  prevBtn.addEventListener('click', () => {
+    if (audio.currentTime > 2) audio.currentTime = 0;
+    else loadTrack((currentTrack - 1 + tracks.length) % tracks.length);
+    doPlay();
+  });
+  nextBtn.addEventListener('click', () => {
+    loadTrack((currentTrack + 1) % tracks.length);
+    doPlay();
+  });
+  progressBar.addEventListener('click', (e) => {
+    const rect = progressBar.getBoundingClientRect();
+    audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+  });
 
-  function tryInitYt() {
-    if (typeof YT !== 'undefined' && YT.Player && YT.Player instanceof Function) {
-      initPlayer();
-    } else if (typeof YT !== 'undefined' && YT) {
-      setTimeout(tryInitYt, 500);
-    } else {
-      window.onYouTubeIframeAPIReady = initPlayer;
-      setTimeout(() => {
-        if (!ytReady && typeof YT !== 'undefined' && YT.Player) initPlayer();
-      }, 3000);
-    }
-  }
-
-  tryInitYt();
-  setTimeout(() => { if (!usingYt && !audio.src && !ytReady) loadFallback(0); }, 5000);
-  playlistTimer = setInterval(fetchPlaylist, 3600000);
+  loadTrack(0);
   globe = initGlobe();
 }
 
