@@ -19,6 +19,8 @@ document.body.addEventListener('click', () => {
   if (!loadingScreen.classList.contains('hidden')) loadingVideo.play();
 }, { once: true });
 
+let audioAnalyser = null;
+
 function initNeurons() {
   const canvas = document.getElementById('neuron-canvas');
   if (!canvas) return;
@@ -48,26 +50,37 @@ function initNeurons() {
 
   requestAnimationFrame(function frame(t) {
     t /= 1000;
+
+    let bass = 0;
+    if (audioAnalyser) {
+      const data = new Uint8Array(audioAnalyser.frequencyBinCount);
+      audioAnalyser.getByteFrequencyData(data);
+      const bins = Math.min(5, data.length);
+      for (let i = 0; i < bins; i++) bass += data[i];
+      bass = bass / bins / 255;
+    }
+
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
     neurons.forEach(n => {
-      n.x += n.vx;
-      n.y += n.vy;
+      n.x += n.vx * (1 + bass * 2);
+      n.y += n.vy * (1 + bass * 2);
       if (n.x < 0 || n.x > 1) n.vx *= -1;
       if (n.y < 0 || n.y > 1) n.vy *= -1;
       const px = n.x * w, py = n.y * h;
-      const pulse = 1 + Math.sin(t * 2 + n.phase) * 0.15;
+      const pulse = 1 + Math.sin(t * 2 + n.phase) * (0.15 + bass * 0.35);
       const r = n.size * pulse;
+      const glowMult = 1.8 + bass * 3;
       const color = n.isGold ? '255,215,0' : '255,255,255';
       ctx.beginPath();
-      ctx.arc(px, py, r * 1.8, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${color},0.08)`;
+      ctx.arc(px, py, r * glowMult, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${color},${0.08 + bass * 0.12})`;
       ctx.fill();
       ctx.beginPath();
       ctx.arc(px, py, r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${color},0.9)`;
+      ctx.fillStyle = `rgba(${color},${0.9 + bass * 0.1})`;
       ctx.fill();
     });
 
@@ -80,8 +93,8 @@ function initNeurons() {
           ctx.beginPath();
           ctx.moveTo(neurons[i].x * w, neurons[i].y * h);
           ctx.lineTo(neurons[j].x * w, neurons[j].y * h);
-          ctx.strokeStyle = `rgba(255,255,255,${(1 - dist / CONN_DIST) * 0.5})`;
-          ctx.lineWidth = 1;
+          ctx.strokeStyle = `rgba(255,255,255,${(1 - dist / CONN_DIST) * (0.5 + bass * 0.5)})`;
+          ctx.lineWidth = 1 + bass * 1.5;
           ctx.stroke();
         }
       }
@@ -138,6 +151,22 @@ function initMusicPlayer() {
   audio.preload = 'auto';
   let isPlaying = false;
 
+  let audioCtx = null;
+  function setupAudioAnalyser() {
+    if (audioCtx) return;
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const a = audioCtx.createAnalyser();
+      a.fftSize = 256;
+      const src = audioCtx.createMediaElementSource(audio);
+      src.connect(a);
+      a.connect(audioCtx.destination);
+      audioAnalyser = a;
+    } catch (e) {
+      console.warn('Audio analysis not available');
+    }
+  }
+
   const mv = document.createElement('video');
   mv.playsInline = true;
   mv.preload = 'auto';
@@ -173,6 +202,8 @@ function initMusicPlayer() {
   }
 
   function doPlay() {
+    setupAudioAnalyser();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
     const src = mode === 'video' ? mv : audio;
     src.play().then(() => {
       setUI(true);
